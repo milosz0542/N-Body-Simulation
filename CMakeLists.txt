@@ -23,7 +23,9 @@ find_package(glm CONFIG REQUIRED)
 
 add_executable(NBodyProblem src/main.cpp
         src/gui/NBodyWidget.cpp
-        src/gui/NBodyWidget.h)
+        src/gui/NBodyWidget.h
+        src/gui/MainWindow.cpp
+        src/gui/MainWindow.h)
 target_link_libraries(NBodyProblem
         Qt::Core
         Qt::Gui
