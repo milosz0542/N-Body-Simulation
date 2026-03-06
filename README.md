@@ -29,7 +29,7 @@ TODO
 
 ## Progress
 - [x] Sprint 1: Environment and skeleton of the project <br>
-Sprint 1 is finished (09.03.2026). <br>
+Sprint 1 is finished (06.03.2026). <br>
 In this sprint, the environment was set up and the skeleton of the project was created. <br>
 The project is structured in a way that allows for easy development and maintenance. <br>
 - [ ] Sprint 2: Physics engine and naive gravity
