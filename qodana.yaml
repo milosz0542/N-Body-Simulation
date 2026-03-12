@@ -9,6 +9,7 @@ profile:
 bootstrap: |
   # If you are running in CI, you might need to install Qt/Eigen
   # This section runs before the analysis starts
+  mkdir -p /var/lib/apt/lists/partial
   apt-get update && apt-get install -y libqt5gui5 libqt5opengl5-dev libeigen3-dev qt6-base-dev libglm-dev libglew-dev libgl1-mesa-dev
 include:
   - name: CheckDependencyLicenses
