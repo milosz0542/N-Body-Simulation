@@ -29,7 +29,7 @@ TEST(GravityEngineTest, SingleBodyRemainsStatic) {
 
     engine.addBody(lonelyPlanet);
 
-    // Puszczamy symulację na 1 sekundę
+    // Run the simulation for 1 second
     engine.update(1.0f);
 
     const auto& bodies = engine.getBodies();
@@ -49,7 +49,7 @@ TEST(PhysicsEngineTest, TwoBodiesAttractEachOther) {
     engine.addBody(bodyA);
     engine.addBody(bodyB);
 
-    // Puszczamy symulację na 1 sekundę
+    // Run the simulation for 1 second
     engine.update(1.0f);
 
     const auto& bodies = engine.getBodies();
