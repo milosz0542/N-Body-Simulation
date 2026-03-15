@@ -21,8 +21,12 @@ find_package(GLEW REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(glm CONFIG REQUIRED)
 
+find_package(OpenMP REQUIRED)
+
 add_library(NBodyCore
         src/core/CelestialBody.cpp
+        src/core/GravityEngine.cpp
+        src/core/GravityEngine.h
 )
 
 target_include_directories(NBodyCore PUBLIC src)
@@ -45,6 +49,7 @@ target_link_libraries(NBodyProblem
         GLEW::GLEW
         NBodyCore
         glm::glm
+        OpenMP::OpenMP_CXX
 )
 
 enable_testing()

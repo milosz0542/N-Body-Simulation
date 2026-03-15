@@ -16,3 +16,14 @@ float CelestialBody::calculateRadius(float mass) {
 }
 
 void CelestialBody::addForce(Eigen::Vector3f& force) { this->force += force; }
+
+void CelestialBody::update(float deltaTime) {
+    // Count acceleration (F/m)
+    Eigen::Vector3f acceleration = force / mass;
+
+    // v = v0 + a*t
+    velocity += acceleration * deltaTime;
+
+    // x = x0 + v*t
+    position += velocity * deltaTime;
+}
