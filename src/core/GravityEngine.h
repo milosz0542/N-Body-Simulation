@@ -1,6 +1,7 @@
 //
 // Created by milosz on 3/12/26.
 //
+#pragma once
 #include "CelestialBody.h"
 #include <vector>
 
