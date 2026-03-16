@@ -19,7 +19,9 @@ public:
 
     void resetForce() { force.setZero(); }
 
-    void update(float deltaTime);
+    // void update(float deltaTime);
+    void updatePosition(float deltaTime);
+    void updateVelocity(float deltaTime);
 
 
 private:

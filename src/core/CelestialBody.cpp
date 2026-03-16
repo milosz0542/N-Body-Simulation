@@ -17,13 +17,29 @@ float CelestialBody::calculateRadius(float mass) {
 
 void CelestialBody::addForce(Eigen::Vector3f& force) { this->force += force; }
 
-void CelestialBody::update(float deltaTime) {
-    // Count acceleration (F/m)
+// void CelestialBody::update(float deltaTime) {
+//     // Count acceleration (F/m)
+//     Eigen::Vector3f acceleration = force / mass;
+//
+//     // v = v0 + a*t
+//     velocity += acceleration * deltaTime;
+//
+//     // x = x0 + v*t
+//     position += velocity * deltaTime;
+// }
+
+void CelestialBody::updatePosition(float deltaTime) {
     Eigen::Vector3f acceleration = force / mass;
 
-    // v = v0 + a*t
-    velocity += acceleration * deltaTime;
+    // Step 1: Position update
+    position += velocity * deltaTime + 0.5f * acceleration * deltaTime * deltaTime;
 
-    // x = x0 + v*t
-    position += velocity * deltaTime;
+    // Step 2: Velocity update
+    velocity += 0.5f * acceleration * deltaTime;
+}
+
+void CelestialBody::updateVelocity(float deltaTime) {
+    Eigen::Vector3f newAcceleration = force / mass;
+
+    velocity += 0.5f * newAcceleration * deltaTime;
 }

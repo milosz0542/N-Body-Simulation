@@ -7,6 +7,7 @@ target_link_libraries(CoreTests
     PRIVATE
     NBodyCore
     GTest::gtest_main
+    OpenMP::OpenMP_CXX
 )
 
 include(GoogleTest)

@@ -1,0 +1,33 @@
+name: GTest CI
+on:
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  builds-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+          cmake g++ libgl1-mesa-dev libglu1-mesa-dev \
+          libglew-dev libglm-dev libeigen3-dev \
+          libomp-dev qt6-base-dev qt6-base-private-dev \
+          libxkbcommon-dev libvulkan-dev
+          
+      - name: Configure cmake
+        run: cmake -S . -B build
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Run tests
+        run: |
+          cd build
+          sudo apt-get install -y xvfb
+          xvfb-run --server-args="-screen 0 1024x768x24" ctest --output-on-failure
