@@ -10,49 +10,6 @@ void GravityEngine::addBody(const CelestialBody& body) {
     bodies.push_back(body);
 }
 
-// void GravityEngine::update(float deltaTime) {
-//     for (auto& body : bodies) {
-//         body.updatePosition(deltaTime);
-//     }
-//
-//     for (auto& body : bodies) {
-//         body.resetForce();
-//     }
-//
-//     // Softening Parameter (to prevent singularities)
-//     // Epsilon^2=0.01 [m]
-//     const float softeningSquared = 0.01f; // In the future it would depend on size of simulation
-//
-//     // Force calculations
-//     size_t n = bodies.size();
-//
-//     // OMP parallel - divide tasks for every CPU thread
-//     #pragma omp parallel for
-//     for (size_t i = 0; i < n; i++) {
-//         for (size_t j = 0; j < n; j++) {
-//             if (i==j) continue;
-//
-//             // Displacement vector
-//             Eigen::Vector3f r_vec = bodies[j].position - bodies[i].position;
-//
-//             // Square of the distance with softening
-//             float r_sq = r_vec.squaredNorm() + softeningSquared;
-//
-//             float r = std::sqrt(r_sq);
-//
-//             float forceMagnitude = (G * bodies[i].mass * bodies[j].mass) / (r_sq*r);
-//
-//             Eigen::Vector3f forceVec = forceMagnitude * r_vec;
-//
-//             bodies[i].addForce(forceVec);
-//         }
-//     }
-//
-//     for (auto& body : bodies) {
-//         body.updateVelocity(deltaTime);
-//     }
-// }
-
 void GravityEngine::update(float deltaTime) {
     int n = static_cast<int>(bodies.size());
 
@@ -108,3 +65,31 @@ void GravityEngine::update(float deltaTime) {
 }
 
 const std::vector<CelestialBody>& GravityEngine::getBodies() const { return bodies; }
+
+float GravityEngine::calculateTotalEnergy() const {
+    float totalKinetic = 0.0f;
+    float totalPotential = 0.0f;
+    int n = static_cast<int>(bodies.size());
+
+    // Multithread totalKinetic
+    #pragma omp parallel for reduction(+:totalKinetic)
+    for (int i = 0; i < n; ++i) {
+        float speedSquared = bodies[i].velocity.squaredNorm();
+        totalKinetic += 0.5f * bodies[i].mass * speedSquared;
+    }
+
+    // Multithread totalPotential
+    #pragma omp parallel for schedule(dynamic) reduction(+:totalPotential)
+    for (int i = 0; i < n; ++i) {
+        for (int j = i+1; j < n; ++j) {
+            float distance = (bodies[i].position - bodies[j].position).norm();
+            totalPotential += G * bodies[i].mass * bodies[j].mass / distance;
+
+            if (distance > 0.000001f) {
+                totalPotential += -(G * bodies[i].mass * bodies[j].mass) / distance;
+            }
+        }
+    }
+
+    return totalKinetic + totalPotential;
+}
