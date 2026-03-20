@@ -62,6 +62,9 @@ void runHeadlessMode(int steps, float deltaTime) {
     GravityEngine engine;
 
     std::ofstream csvFile("simulation_results.csv");
+    if (!csvFile.is_open()) {
+        std::cerr << "Warning: could not open CSV file 'simulation_results.csv' for writing. Continuing without CSV output." << std::endl;
+    }
 
     if (!inputFile.empty()) {
         loadUniverseFromFile(inputFile, engine);
