@@ -117,9 +117,13 @@ int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
         if (std::string(argv[i]) == "--headless") { // Run in headless
             isHeadless = true;
-        }
-        if (std::string(argv[i]) == "--file") { // Provide universe from file
-            inputFile = argv[i+1];
+        } else if (std::string(argv[i]) == "--file") { // Provide universe from file
+            if (i + 1 < argc) {
+                inputFile = argv[i + 1];
+                ++i; // Skip the filename argument
+            } else {
+                std::cerr << "Error: --file option requires a filename argument.\n";
+            }
         }
     }
 
