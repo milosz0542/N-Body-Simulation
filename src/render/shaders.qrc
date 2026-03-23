@@ -1,0 +1,10 @@
+<!DOCTYPE RCC><RCC version="1.0">
+    <qresource prefix="/shaders">
+        <file>particle.vert</file>
+        <file>particle.frag</file>
+        <file>starfield.vert</file>
+        <file>starfield.frag</file>
+        <file>trail.vert</file>
+        <file>trail.frag</file>
+    </qresource>
+</RCC>

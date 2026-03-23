@@ -3,6 +3,7 @@
 //
 #pragma once
 #include <Eigen/Dense>
+#include <deque>
 
 /**
  * Represents a celestial body such as a planet, star, moon, or asteroid within a celestial system.
@@ -95,6 +96,10 @@ public:
      */
     void updateVelocity(float deltaTime);
 
+    void updateTrail();
+
+    const std::deque<Eigen::Vector3f>& getTrailHistory() const { return trailHistory; }
+
 private:
     /**
      * Calculates the radius of a celestial body based on its mass.
@@ -106,4 +111,6 @@ private:
      * @return The calculated radius of the celestial body. Returns 0.0f if the mass is non-positive.
      */
     static float calculateRadius(float mass);
+
+    std::deque<Eigen::Vector3f> trailHistory;
 };

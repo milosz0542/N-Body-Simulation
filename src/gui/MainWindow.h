@@ -6,6 +6,7 @@
 
 #include <QMainWindow>
 #include "NBodyWidget.h"
+#include "core/GravityEngine.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -16,4 +17,5 @@ public:
 
 private:
     NBodyWidget *glWidget;
+    GravityEngine engine;
 };

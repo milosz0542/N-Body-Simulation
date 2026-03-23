@@ -39,7 +39,8 @@ add_executable(NBodyProblem src/main.cpp
         src/gui/NBodyWidget.h
         src/gui/MainWindow.cpp
         src/gui/MainWindow.h
-        src/core/CelestialBody.h)
+        src/core/CelestialBody.h
+        src/render/shaders.qrc)
 
 target_link_libraries(NBodyProblem
         Qt::Core
