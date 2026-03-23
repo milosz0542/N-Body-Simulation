@@ -27,6 +27,8 @@ add_library(NBodyCore
         src/core/CelestialBody.cpp
         src/core/GravityEngine.cpp
         src/core/GravityEngine.h
+        src/render/RenderUtils.cpp
+        src/render/RenderUtils.h
 )
 
 target_include_directories(NBodyCore PUBLIC src)

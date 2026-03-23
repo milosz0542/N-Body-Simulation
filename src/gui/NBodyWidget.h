@@ -6,6 +6,12 @@
 
 #include <QtOpenGLWidgets/QOpenGLWidget>
 #include <QOpenGLFunctions>
+#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLBuffer>
+#include <QOpenGLVertexArrayObject>
+#include <vector>
+#include "core/GravityEngine.h"
+#include "render/RenderUtils.h"
 
 class NBodyWidget : public QOpenGLWidget, protected QOpenGLFunctions {
     Q_OBJECT // Required by signals mechanism and Qt slots
@@ -14,6 +20,7 @@ public:
     explicit NBodyWidget(QWidget *parent = nullptr);
     ~NBodyWidget() override;
 
+    void setEngine(GravityEngine *eng) { engine=eng; };
 protected:
     // Called once at start. Loading shaders, and setting default state
     void initializeGL() override;
@@ -23,4 +30,13 @@ protected:
 
     // Called at every frame. Rendering code goes here
     void paintGL() override;
+
+private:
+    GravityEngine* engine = nullptr;
+
+    QOpenGLVertexArrayObject VAO;
+    QOpenGLBuffer VBO;
+
+    // Auxiliary buffer
+    std::vector<float> gpuPositionBuffer;
 };

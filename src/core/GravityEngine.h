@@ -27,6 +27,8 @@ private:
     std::vector<CelestialBody> bodies;
     // const float G = 6.67430e-11f;
     const float G = 1; // IDGAF. Why G=1 works but G = 6.67430e-11 not?
+    float softening = 0.1f;
+
 public:
     /**
     * @brief Adds a celestial body to the gravity simulation.
@@ -62,4 +64,16 @@ public:
      * @return The total energy of the system, which is the sum of kinetic and potential energy.
      */
     float calculateTotalEnergy() const;
+
+    // /**
+    //  * @brief Sets the softening parameter used in gravitational force and potential energy calculations.
+    //  * @param softening The softening length.
+    //  */
+    // void setSoftening(float softening);
+    //
+    // /**
+    //  * @brief Gets the current softening parameter.
+    //  * @return The current softening length.
+    //  */
+    // float getSoftening() const;
 };
