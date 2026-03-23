@@ -62,9 +62,15 @@ void NBodyWidget::initializeGL() {
 
     // Initialize Star Shader
     starShaderProgram = new QOpenGLShaderProgram(this);
-    starShaderProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/starfield.vert");
-    starShaderProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/starfield.frag");
-    starShaderProgram->link();
+    if (!starShaderProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/starfield.vert")) {
+        qCritical() << "Could not load starfield vertex shader: " << starShaderProgram->log();
+    }
+    if (!starShaderProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/starfield.frag")) {
+        qCritical() << "Could not load starfield fragment shader: " << starShaderProgram->log();
+    }
+    if (!starShaderProgram->link()) {
+        qCritical() << "Could not link starfield shader program: " << starShaderProgram->log();
+    }
 
     // Generate star data
     std::vector<GLfloat> starData;
