@@ -117,9 +117,23 @@ void NBodyWidget::initializeGL() {
 
     // Initialize trail shader
     trailShaderProgram = new QOpenGLShaderProgram(this);
-    trailShaderProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/trail.vert");
-    trailShaderProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/trail.frag");
-    trailShaderProgram->link();
+    bool trailShaderOk = true;
+    if (!trailShaderProgram->addShaderFromSourceFile(QOpenGLShader::Vertex, ":/shaders/trail.vert")) {
+        qCritical() << "Could not load trail vertex shader:" << trailShaderProgram->log();
+        trailShaderOk = false;
+    }
+    if (!trailShaderProgram->addShaderFromSourceFile(QOpenGLShader::Fragment, ":/shaders/trail.frag")) {
+        qCritical() << "Could not load trail fragment shader:" << trailShaderProgram->log();
+        trailShaderOk = false;
+    }
+    if (trailShaderOk && !trailShaderProgram->link()) {
+        qCritical() << "Could not link trail shader program:" << trailShaderProgram->log();
+        trailShaderOk = false;
+    }
+    if (!trailShaderOk) {
+        // Do not proceed with trail initialization if shader program is invalid
+        return;
+    }
 
     trailVAO.create();
     trailVAO.bind();
