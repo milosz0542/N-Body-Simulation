@@ -4,5 +4,5 @@ in float vBrightness;
 out vec4 FragColor;
 
 void main() {
-    gl_FragColor = vec4(vec3(vBrightness), 1.0);
+    FragColor = vec4(vec3(vBrightness), 1.0);
 }
