@@ -61,6 +61,7 @@ void GravityEngine::update(float deltaTime) {
 
     for (auto& body : bodies) {
         body.updateVelocity(deltaTime);
+        body.updateTrail();
     }
 }
 

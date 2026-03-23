@@ -12,13 +12,17 @@ TEST(RenderUtilsTest, PrepareFlatGPUBufferCorrectly) {
 
     std::vector<float> gpuBuffer = RenderUtils::preparePositionBuffer(bodies);
 
-    ASSERT_EQ(gpuBuffer.size(), 6);
+    ASSERT_EQ(gpuBuffer.size(), 10);
 
-    EXPECT_FLOAT_EQ(gpuBuffer[0], 10.0f);
-    EXPECT_FLOAT_EQ(gpuBuffer[1], 20.0f);
-    EXPECT_FLOAT_EQ(gpuBuffer[2], 30.0f);
+    EXPECT_FLOAT_EQ(gpuBuffer[0], 10.0f); // pos x
+    EXPECT_FLOAT_EQ(gpuBuffer[1], 20.0f); // pos y
+    EXPECT_FLOAT_EQ(gpuBuffer[2], 30.0f); // pos z
+    EXPECT_FLOAT_EQ(gpuBuffer[3], std::cbrt(100.0f)); // radius
+    EXPECT_FLOAT_EQ(gpuBuffer[4], 0.0f); // velocity vec length
 
-    EXPECT_FLOAT_EQ(gpuBuffer[3], -5.0f);
-    EXPECT_FLOAT_EQ(gpuBuffer[4], 0.0f);
-    EXPECT_FLOAT_EQ(gpuBuffer[5], 15.5f);
+    EXPECT_FLOAT_EQ(gpuBuffer[5], -5.0f);
+    EXPECT_FLOAT_EQ(gpuBuffer[6], 0.0f);
+    EXPECT_FLOAT_EQ(gpuBuffer[7], 15.5f);
+    EXPECT_FLOAT_EQ(gpuBuffer[8], std::cbrt(200.0f));
+    EXPECT_FLOAT_EQ(gpuBuffer[9], 0.0f);
 }
