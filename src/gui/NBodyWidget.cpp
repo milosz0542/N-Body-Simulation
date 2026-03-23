@@ -82,7 +82,7 @@ void NBodyWidget::initializeGL() {
         float z = r * u;
 
         // Random Brightness (0.2-1.0)
-        float brightness = 0.2f * 0.8f * (std::rand() / (float)RAND_MAX);
+        float brightness = 0.2f + 0.8f * (std::rand() / static_cast<float>(RAND_MAX));
 
         starData.push_back(x);
         starData.push_back(y);
