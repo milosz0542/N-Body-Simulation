@@ -1,6 +1,9 @@
 add_executable(CoreTests
     core/test_celestial_body.cpp
         core/test_gravity_engine.cpp
+        render/test_render_utils.cpp
+        core/test_edge_cases.cpp
+        core/test_parsing_data.cpp
 )
 
 target_link_libraries(CoreTests
