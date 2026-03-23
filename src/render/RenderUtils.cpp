@@ -11,4 +11,4 @@ std::vector<float> RenderUtils::preparePositionBuffer(const std::vector<Celestia
     }
 
     return buffer;
-};
+}
