@@ -25,7 +25,7 @@ void NBodyWidget::initializeGL() {
     size_t max_particles = 100000;
     VBO.allocate(max_particles * 3 * sizeof(GLfloat));
 
-    this->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GL_FLOAT), nullptr);
+    this->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), nullptr);
     this->glEnableVertexAttribArray(0);
 
     VBO.release();
