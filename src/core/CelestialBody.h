@@ -1,116 +1,131 @@
 //
 // Created by milosz on 3/6/26.
 //
+/**
+ * @file CelestialBody.h
+ * @brief Definition of the CelestialBody class representing a physical object in space.
+ */
+
 #pragma once
 #include <Eigen/Dense>
 #include <deque>
 
 /**
- * Represents a celestial body such as a planet, star, moon, or asteroid within a celestial system.
- * Encapsulates properties and behaviors common to entities existing in space.
+ * @class CelestialBody
+ * @brief Represents a celestial body such as a planet, star, moon, or asteroid within a celestial system.
+ *
+ * Encapsulates physical properties (position, velocity, mass) and behaviors 
+ * common to entities existing in space. It also maintains a history of its 
+ * positions to render trails.
  */
 class CelestialBody {
 public:
     /**
-     * Represents the position of a celestial body in a 3D space.
+     * @brief Position of the celestial body in 3D space.
      *
-     * This variable stores the Cartesian coordinates (x, y, z) of the celestial body
-     * relative to a defined origin. The position is typically measured in units
-     * such as meters or kilometers, depending on the application's unit system.
+     * Cartesian coordinates (x, y, z) relative to a defined origin.
      */
     Eigen::Vector3f position;
+
     /**
-     * Represents the velocity of an object, typically measured as a vector quantity
-     * combining both speed and direction.*/
+     * @brief Velocity of the celestial body.
+     *
+     * A vector quantity combining both speed and direction.
+     */
     Eigen::Vector3f velocity;
+
     /**
-     * Represents the force value, typically measured in newtons (N), used in calculations involving physical dynamics.
+     * @brief Force acting on the celestial body.
+     *
+     * Typically measured in newtons (N), used for calculating acceleration.
      */
     Eigen::Vector3f force;
+
     /**
-     * Represents the mass of an object.*/
+     * @brief Mass of the celestial body.
+     */
     float mass;
+
     /**
-     * Represents the radius of a celestial body.
+     * @brief Radius of the celestial body.
      *
-     * This variable defines the radius of the celestial body, which can be used
-     * for calculations such as collision detection, rendering, or volume estimation.
-     *
-     * The radius is typically derived from the mass of the celestial body
-     * using a predefined relationship (e.g., assuming constant density).
-     *
-     * Units of measurement for the radius should be consistent with the
-     * system of units used in the application (e.g., meters or kilometers).
+     * Derived from the mass assuming constant density. Used for rendering 
+     * and potentially collision detection.
      */
     float radius;
 
+    /**
+     * @brief Default constructor for CelestialBody.
+     * 
+     * Initializes a body at the origin with zero velocity and mass.
+     */
     CelestialBody();
 
     /**
-     * Represents a celestial body such as a planet, star, or moon.
+     * @brief Constructs a CelestialBody with specified initial state.
+     * @param pos Initial position vector.
+     * @param vel Initial velocity vector.
+     * @param m Mass of the body.
      */
-    CelestialBody(const Eigen::Vector3f& pos, const Eigen::Vector3f& vel, float m);
+    CelestialBody(const Eigen::Vector3f& pos, const Eigen::Vector3f& vel, double m);
 
     /**
-     * Applies an external force to the celestial body.
+     * @brief Applies an external force to the celestial body.
      *
      * This method adds the provided force vector to the current force acting
-     * on the celestial body. It modifies the `force` member variable by
-     * accumulating the input force.
+     * on the celestial body.
      *
-     * @param force The force vector to be applied to the celestial body.
-     *              This vector typically represents a physical force, measured
-     *              in newtons (N), and is added to the object's existing force.
+     * @param force The force vector to be applied (e.g., in Newtons).
      */
     void addForce(Eigen::Vector3f& force);
 
     /**
-     * Resets the force to its default state*/
+     * @brief Resets the force to zero.
+     * 
+     * Should be called at the beginning of each simulation step before recomputing forces.
+     */
     void resetForce() { force.setZero(); }
 
     /**
-     * Updates the position of the celestial body based on its current velocity,
-     * acceleration, and the elapsed time.
+     * @brief Updates the position and intermediate velocity based on current forces.
      *
-     * This method calculates the acceleration using the formula: acceleration = force / mass.
-     * The position is updated using the formula:
-     * position += velocity * deltaTime + 0.5 * acceleration * deltaTime^2.
-     * The velocity is also updated in this method using the formula:
-     * velocity += 0.5 * acceleration * deltaTime.
+     * This method calculates acceleration (a = F / m) and updates position
+     * using the current velocity and acceleration over a time step.
      *
-     * @param deltaTime The time elapsed over which the position and velocity update
-     *                  are calculated. Must be a positive value for accurate results.
+     * @param deltaTime The time elapsed for the simulation step.
      */
-    void updatePosition(float deltaTime);
+    void updatePosition(double deltaTime);
 
     /**
-     * Updates the velocity of the celestial body based on the forces applied to it
-     * and the elapsed time.
+     * @brief Updates the velocity of the celestial body based on the forces.
      *
-     * This method calculates the new acceleration of the celestial body using the
-     * formula: acceleration = force / mass. The velocity is then updated using
-     * the formula: velocity += 0.5 * acceleration * deltaTime.
+     * This method completes the velocity update for the current step.
      *
-     * @param deltaTime The time elapsed over which the velocity update is calculated.
-     *                  Must be a positive value for accurate results.
+     * @param deltaTime The time elapsed for the simulation step.
      */
-    void updateVelocity(float deltaTime);
+    void updateVelocity(double deltaTime);
 
+    /**
+     * @brief Records the current position into the trail history.
+     */
     void updateTrail();
 
+    /**
+     * @brief Retrieves the position history of the body.
+     * @return A constant reference to the deque of historical positions.
+     */
     const std::deque<Eigen::Vector3f>& getTrailHistory() const { return trailHistory; }
 
 private:
     /**
-     * Calculates the radius of a celestial body based on its mass.
-     *
-     * The radius is determined using the assumption that the body has a constant density,
-     * resulting in the radius being proportional to the cube root of its mass.
-     *
-     * @param mass The mass of the celestial body. Must be a non-negative value.
-     * @return The calculated radius of the celestial body. Returns 0.0f if the mass is non-positive.
+     * @brief Calculates the radius based on mass assuming constant density.
+     * @param mass The mass of the body.
+     * @return The calculated radius.
      */
-    static float calculateRadius(float mass);
+    static double calculateRadius(double mass);
 
+    /**
+     * @brief Deque storing historical positions for trail rendering.
+     */
     std::deque<Eigen::Vector3f> trailHistory;
 };
