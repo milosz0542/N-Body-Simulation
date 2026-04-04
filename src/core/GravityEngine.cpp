@@ -10,7 +10,7 @@ void GravityEngine::addBody(const CelestialBody& body) {
     bodies.push_back(body);
 }
 
-void GravityEngine::update(float deltaTime) {
+void GravityEngine::update(double deltaTime) {
     int n = static_cast<int>(bodies.size());
 
     // Position update and force reset
@@ -19,7 +19,7 @@ void GravityEngine::update(float deltaTime) {
         body.resetForce();
     }
     
-    float softeningSquared = softening * softening;
+    double softeningSquared = softening * softening;
 
     int numThreads = omp_get_max_threads();
 
@@ -38,9 +38,9 @@ void GravityEngine::update(float deltaTime) {
             for (int j = i+1; j < n; ++j) {
                 Eigen::Vector3f r_vec = bodies[j].position - bodies[i].position;
 
-                float r_sq = r_vec.squaredNorm() + softeningSquared;
-                float r = std::sqrt(r_sq);
-                float forceMagnitude = (G * bodies[i].mass * bodies[j].mass) / (r_sq*r);
+                double r_sq = r_vec.squaredNorm() + softeningSquared;
+                double r = std::sqrt(r_sq);
+                double forceMagnitude = (G * bodies[i].mass * bodies[j].mass) / (r_sq*r);
 
                 Eigen::Vector3f forceVec = forceMagnitude * r_vec;
 
@@ -67,7 +67,7 @@ void GravityEngine::update(float deltaTime) {
 
 const std::vector<CelestialBody>& GravityEngine::getBodies() const { return bodies; }
 
-float GravityEngine::calculateTotalEnergy() const {
+double GravityEngine::calculateTotalEnergy() const {
     double totalKinetic = 0.0;
     double totalPotential = 0.0;
     int n = static_cast<int>(bodies.size());
@@ -75,17 +75,17 @@ float GravityEngine::calculateTotalEnergy() const {
     // Multithread totalKinetic
     #pragma omp parallel for reduction(+:totalKinetic)
     for (int i = 0; i < n; ++i) {
-        float speedSquared = bodies[i].velocity.squaredNorm();
+        double speedSquared = bodies[i].velocity.squaredNorm();
         totalKinetic += 0.5f * bodies[i].mass * speedSquared;
     }
 
     // Multithread totalPotential
-    float softeningSquared = softening * softening;
+    double softeningSquared = softening * softening;
     #pragma omp parallel for schedule(dynamic) reduction(+:totalPotential)
     for (int i = 0; i < n; ++i) {
         for (int j = i+1; j < n; ++j) {
-            float r_sq = (bodies[i].position - bodies[j].position).squaredNorm() + softeningSquared;
-            float distance = std::sqrt(r_sq);
+            double r_sq = (bodies[i].position - bodies[j].position).squaredNorm() + softeningSquared;
+            double distance = std::sqrt(r_sq);
             totalPotential += -(G * bodies[i].mass * bodies[j].mass) / distance;
         }
     }

@@ -81,7 +81,7 @@ void NBodyWidget::initializeGL() {
         float theta = (std::rand() / (float)RAND_MAX) * 2.0f * M_PI;
 
         // Sphere radius
-        float r = 80.0f;
+        float r = 800.0f;
 
         float x = r * std::sqrt(1.0f - u * u) * std::cos(theta);
         float y = r * std::sqrt(1.0f - u * u) * std::sin(theta);
@@ -195,8 +195,39 @@ void NBodyWidget::paintGL() {
     // Activate shaders
     shaderProgram->bind();
 
+    if (m_trackedPlanetIndex >= 0 && m_trackedPlanetIndex < engine->getBodies().size()) {
+        Eigen::Vector3f planetPos = engine->getBodies()[m_trackedPlanetIndex].position;
+
+        targetCameraTarget = QVector3D(planetPos.x(), planetPos.y(), planetPos.z());
+    }
+
+    // Camera interpolate
+    float lerpFactor = 0.1f;
+
+    if (m_cinematicMode) {
+        targetYaw += 0.5f;
+    }
+
+    cameraDistance += (targetDistance - cameraDistance) * lerpFactor;
+    cameraPitch += (targetPitch - cameraPitch) * lerpFactor;
+    cameraYaw += (targetYaw - cameraYaw) * lerpFactor;
+
+    cameraTarget.setX(cameraTarget.x() + (targetCameraTarget.x() - cameraTarget.x()) * lerpFactor);
+    cameraTarget.setY(cameraTarget.y() + (targetCameraTarget.y() - cameraTarget.y()) * lerpFactor);
+    cameraTarget.setZ(cameraTarget.z() + (targetCameraTarget.z() - cameraTarget.z()) * lerpFactor);
+
+    // Building inteligent matrix
     viewMatrix.setToIdentity();
-    viewMatrix.translate(0.0f, 0.0f, -50.0f);
+
+    // 1. Move camera back from the target
+    viewMatrix.translate(0.0f, 0.0f, -cameraDistance);
+
+    // 2. Rotate around the target (pitch and then yaw)
+    viewMatrix.rotate(cameraPitch, 1.0f, 0.0f, 0.0f);
+    viewMatrix.rotate(cameraYaw, 0.0f, 1.0f, 0.0f);
+
+    // 3. Move the origin to the target position
+    viewMatrix.translate(-cameraTarget.x(), -cameraTarget.y(), -cameraTarget.z());
 
     // Send matrix to uniform
     shaderProgram->setUniformValue("projection", projectionMatrix);
@@ -273,4 +304,64 @@ void NBodyWidget::paintGL() {
 
     shaderProgram->release();
     // And magic ends
+}
+
+void NBodyWidget::mousePressEvent(QMouseEvent *event) {
+    lastMousePos = event->pos();
+}
+
+void NBodyWidget::mouseMoveEvent(QMouseEvent *event) {
+    int dx = event->position().x() - lastMousePos.x();
+    int dy = event->position().y() - lastMousePos.y();
+
+    if (event->buttons() & Qt::LeftButton) {
+        // Orbiting
+        float sensitivity = 0.25f;
+
+        targetYaw += dx * sensitivity;
+        targetPitch += dy * sensitivity;
+
+        if (targetPitch > 89.0f) targetPitch = 89.0f;
+        if (targetPitch < -89.0f) targetPitch = -89.0f;
+
+        update();
+    } else if (event->buttons() & Qt::RightButton) {
+        // Panning relative to the camera view
+        if (m_trackedPlanetIndex != -1) m_trackedPlanetIndex = -1;
+
+        // Sensivity proportional to distance
+        float panSensitivity = targetDistance * 0.001f;
+
+        // 1. Calculating world-space panning vectors based on view matrix orientation
+        // View matrix is LookAt * Translate(-target). We invert the rotation part of the matrix.
+        QMatrix4x4 rotationOnly = viewMatrix;
+        rotationOnly.setColumn(3, QVector4D(0, 0, 0, 1));
+        QMatrix4x4 invRotation = rotationOnly.inverted();
+
+        // Screen space axes
+        QVector3D screenX = (invRotation * QVector4D(1, 0, 0, 0)).toVector3D();
+        QVector3D screenY = (invRotation * QVector4D(0, 1, 0, 0)).toVector3D();
+
+        // 2. Adjust target position by the panned amount
+        targetCameraTarget -= screenX * dx * panSensitivity;
+        targetCameraTarget += screenY * dy * panSensitivity;
+
+        update();
+    }
+
+    lastMousePos = event->pos();
+}
+
+void NBodyWidget::wheelEvent(QWheelEvent *event) {
+    float scrollAmount = event->angleDelta().y() / 120.0f;
+
+    // Zooming velocity proportional to the distance
+    float zoomFactor = 0.15f;
+
+    targetDistance -= scrollAmount * targetDistance * zoomFactor;
+
+    if (targetDistance < 0.1f) targetDistance = 0.1f;
+    if (targetDistance > 5000.0f) targetDistance = 5000.0f;
+
+    update();
 }
