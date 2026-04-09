@@ -12,6 +12,8 @@
 #include <QLabel>
 #include <QWidget>
 #include <QTimer>
+#include <QTabWidget>
+#include <QCheckBox>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Engine init
@@ -35,62 +37,121 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Adding OpenGL widget to layout (weight 4)
     mainLayout->addWidget(glWidget, 4);
 
-    // Creating control
-    QWidget *rightPanel = new QWidget(this);
 
-    // Creating layout for control - vertical TOP/BOTTOM
-    QVBoxLayout *panelLayout = new QVBoxLayout(rightPanel);
+    QTabWidget *tabs = new QTabWidget(this);
+    mainLayout->addWidget(tabs, 1);
 
-    // Placeholders
-    panelLayout->addWidget(new QLabel("Panel Sterowania", this));
+    // ================
+    // TAB 1 - SIM
+    // ================
+    QWidget *simTab = new QWidget();
+    QVBoxLayout *simLayout = new QVBoxLayout(simTab);
 
     QPushButton *startButton = new QPushButton("Start symulacji", this);
-    panelLayout->addWidget(startButton);
+    simLayout->addWidget(startButton);
 
-    panelLayout->addWidget(new QLabel("Prędkość symulacji", this));
+    simLayout->addWidget(new QLabel("Prędkość symulacji", this));
     QSlider *slider = new QSlider(Qt::Horizontal, this);
-    panelLayout->addWidget(slider);
+    simLayout->addWidget(slider);
 
-    panelLayout->addWidget(new QLabel("Tryb kamery", this));
+    simLayout->addStretch();
+    tabs->addTab(simTab, "Symulacja");
+
+    // ================
+    // TAB 2 - VISUALIZE
+    // ================
+    QWidget *visTab = new QWidget();
+    QVBoxLayout *visLayout = new QVBoxLayout(visTab);
+
+    QCheckBox *starfieldCheck = new QCheckBox("Pokaż gwiazdy w tle", this);
+    QCheckBox *trailsCheck = new QCheckBox("Pokaż ślady planet", this);
+    QCheckBox *speedColorCheck = new QCheckBox("Koloruj planety według prędkości", this);
+    speedColorCheck->setChecked(true);
+
+    QCheckBox *cinematicModeCheck = new QCheckBox("Tryb kinowy (wolna kamera)", this);
+
+    visLayout->addWidget(starfieldCheck);
+    visLayout->addWidget(trailsCheck);
+    visLayout->addWidget(speedColorCheck);
+    visLayout->addWidget(cinematicModeCheck);
+
+    visLayout->addStretch();
+    tabs->addTab(visTab, "Wizualizacja");
+
+    // ================
+    // TAB 3 - CAMERA
+    // ================
+    QWidget *camTab = new QWidget();
+    QVBoxLayout *camLayout = new QVBoxLayout(camTab);
+
+    camLayout->addWidget(new QLabel("Sledź obiekt", this));
     QComboBox *planetSelector = new QComboBox(this);
     planetSelector->addItem("Wolna Kamera (Środek)");
 
+    // Loading planets to dropdown box
     const auto& bodies = engine.getBodies();
     for (size_t i = 0; i < bodies.size(); ++i) {
         QString planetName = QString("Obiekt %1 (Masa: %2)").arg(i).arg(bodies[i].mass);
         planetSelector->addItem(planetName);
     }
+    camLayout->addWidget(planetSelector);
 
-    panelLayout->addWidget(planetSelector);
+    camLayout->addStretch();
+    tabs->addTab(camTab, "Kamera");
 
-    connect(planetSelector, &QComboBox::currentIndexChanged, this, [this](int index) {
-        glWidget->setTrackedPlanetIndex(index - 1); // -1 because first item is "Free Camera"
-    });
-
-    // Setting elements to be "at top"
-    panelLayout->addStretch();
-
-    // Adding control to layout (weight 1)
-    mainLayout->addWidget(rightPanel, 1);
+    // // Setting elements to be "at top"
+    // panelLayout->addStretch();
+    //
+    // // Adding control to layout (weight 1)
+    // mainLayout->addWidget(rightPanel, 1);
 
     glWidget->setEngine(&engine);
 
-    QTimer *simTimer = new QTimer(this);
-
+    // Timer - Main Sim Loop
+    simTimer = new QTimer(this);
     connect(simTimer, &QTimer::timeout, this, [this]() {
-        engine.update(0.0016f);
+        const float physics_dt = 0.002f; // Constant time step for physics
+
+        float frameSimulationTime = 0.0016f * m_timeMultiplier;
+
+        int stepsToSimulate = static_cast<int>(std::round(frameSimulationTime / physics_dt));
+
+        if (stepsToSimulate > 1000) stepsToSimulate = 1000; // Upper blockade
+
+        for (int i = 0; i < stepsToSimulate; ++i) {
+            engine.update(physics_dt);
+        }
 
         glWidget->update();
     });
 
-    connect(startButton, &QPushButton::clicked, this, [simTimer, startButton]() {
+    // Start/stop of simulation (I hate start stop in my vw golf)
+    connect(startButton, &QPushButton::clicked, this, [this, startButton]() {
         if (simTimer->isActive()) {
             simTimer->stop();
             startButton->setText("Start symulacji");
         } else {
-            simTimer->start(16);
-            startButton->setText("Pauza");
+            simTimer->start(16); // ~60 FPS
+            startButton->setText("Stop symulacji");
         }
+    });
+
+    // Time multiplier slider
+    slider->setRange(1, 200);
+    slider->setValue(100);
+    connect(slider, &QSlider::valueChanged, this, [this](int value) {
+        m_timeMultiplier = value / 100.0f;
+    });
+
+    // Checkboxes for visualization options
+    connect(starfieldCheck, &QCheckBox::toggled, glWidget, &NBodyWidget::setDrawStarfield);
+    connect(trailsCheck, &QCheckBox::toggled, glWidget, &NBodyWidget::setDrawTrails);
+    connect(speedColorCheck, &QCheckBox::toggled, glWidget, &NBodyWidget::setUseVelocityColor);
+    connect(cinematicModeCheck, &QCheckBox::toggled, glWidget, &NBodyWidget::setCinematicMode);
+
+    // Planet selector
+    connect(planetSelector, &QComboBox::currentIndexChanged, glWidget, [this](int index) {
+        glWidget->setTrackedPlanetIndex(index - 1);
     });
 }
 
