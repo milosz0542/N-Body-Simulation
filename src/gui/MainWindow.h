@@ -16,6 +16,8 @@ public:
     ~MainWindow() override;
 
 private:
+    float m_timeMultiplier = 1.0f;
+    QTimer *simTimer;
     NBodyWidget *glWidget;
     GravityEngine engine;
 };

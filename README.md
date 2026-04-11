@@ -59,7 +59,11 @@ In this sprint, the physics engine was implemented and the naive gravity was cal
 The physics engine is responsible for calculating the forces and updating the positions and velocities of the objects. <br>
 The naive gravity is calculated using the Newton's law of gravity. <br>
 Headless mode is implemented for verification.
-- [ ] Sprint 3: Rendering and camera movement in OpenGL
+- [x] Sprint 3: Rendering and camera movement in OpenGL <br>
+Sprint 3 is finished (04.04.2026). <br>
+In this sprint, the rendering and camera movement in OpenGL were implemented. <br>
+The rendering is responsible for visualizing the objects in the simulation. <br>
+The camera movement allows the user to move the camera in the simulation and zoom in/out. <
 - [ ] Sprint 4: User interface in Qt
 - [ ] Sprint 5: Acceleration and optimization
 - [ ] Sprint 6: Documentation and finalization
