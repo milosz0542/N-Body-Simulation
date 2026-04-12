@@ -26,6 +26,8 @@ private:
      */
     std::vector<CelestialBody> bodies;
 
+    std::vector<CelestialBody> initialBodies;
+
     /**
      * @brief Gravitational constant G.
      * 
@@ -39,12 +41,18 @@ private:
     double softening = 0.1f;
 
 public:
+    GravityEngine() = default;
+
     /**
      * @brief Adds a celestial body to the gravity simulation.
      * @param body The celestial body to be added.
      */
     void addBody(const CelestialBody& body);
 
+    void setBodies(const std::vector<CelestialBody>& newBodies);
+
+    void saveInitialState();
+    void resetInitialState();
     /**
      * @brief Updates the state of the simulation by one time step.
      *

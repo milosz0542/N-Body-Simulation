@@ -40,3 +40,20 @@ TEST(CelestialBodyTest, ForceAccumulationAndReset) {
 
     EXPECT_EQ(body.force, Eigen::Vector3f::Zero());
 }
+
+TEST(CelestialBodyTest, CSVLoadingLogic) {
+    // Simulating the logic from loadFromCSV
+    std::string line = "1.0, 2.0, 3.0, 0.1, 0.2, 0.3, 100.0";
+    std::replace(line.begin(), line.end(), ',', ' ');
+    std::stringstream ss(line);
+    double x, y, z, vx, vy, vz, mass;
+
+    ASSERT_TRUE(ss >> x >> y >> z >> vx >> vy >> vz >> mass);
+    EXPECT_DOUBLE_EQ(x, 1.0);
+    EXPECT_DOUBLE_EQ(y, 2.0);
+    EXPECT_DOUBLE_EQ(z, 3.0);
+    EXPECT_DOUBLE_EQ(vx, 0.1);
+    EXPECT_DOUBLE_EQ(vy, 0.2);
+    EXPECT_DOUBLE_EQ(vz, 0.3);
+    EXPECT_DOUBLE_EQ(mass, 100.0);
+}
