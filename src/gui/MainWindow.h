@@ -12,6 +12,7 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
+    void loadFromCSV(QString filename);
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
 

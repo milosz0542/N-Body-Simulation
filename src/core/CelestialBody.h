@@ -116,6 +116,8 @@ public:
      */
     const std::deque<Eigen::Vector3f>& getTrailHistory() const { return trailHistory; }
 
+    void clearTrailHistory() { trailHistory.clear(); }
+
 private:
     /**
      * @brief Calculates the radius based on mass assuming constant density.

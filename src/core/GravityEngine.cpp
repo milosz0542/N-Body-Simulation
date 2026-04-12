@@ -10,6 +10,22 @@ void GravityEngine::addBody(const CelestialBody& body) {
     bodies.push_back(body);
 }
 
+void GravityEngine::setBodies(const std::vector<CelestialBody> &newBodies) {
+    bodies = newBodies;
+}
+
+void GravityEngine::saveInitialState() {
+    initialBodies = bodies;
+}
+
+void GravityEngine::resetInitialState() {
+    bodies = initialBodies;
+
+    for (auto& body : bodies) {
+        body.clearTrailHistory();
+    }
+}
+
 void GravityEngine::update(double deltaTime) {
     int n = static_cast<int>(bodies.size());
 

@@ -14,14 +14,48 @@
 #include <QTimer>
 #include <QTabWidget>
 #include <QCheckBox>
+#include <QFileDialog>
+#include <cmath>
+#include <fstream>
+#include <iostream>
+#include <algorithm>
+
+void MainWindow::loadFromCSV(QString filename) {
+    std::ifstream file(filename.toStdString());
+    if (!file.is_open()) {
+        std::cerr << "Could not open file: " << filename.toStdString() << std::endl;
+        return;
+    }
+
+    std::string line;
+    std::vector<CelestialBody> newBodies;
+
+    while (std::getline(file, line)) {
+        if (line.empty()) continue;
+        
+        std::replace(line.begin(), line.end(), ',', ' ');
+        std::stringstream ss(line);
+        double x, y, z, vx, vy, vz, mass;
+
+        if (ss >> x >> y >> z >> vx >> vy >> vz >> mass) {
+            newBodies.emplace_back(Eigen::Vector3f(x, y, z), Eigen::Vector3f(vx, vy, vz), mass);
+        } else {
+            std::cerr << "Invalid line format: " << line << std::endl;
+        }
+    }
+
+    engine.setBodies(newBodies);
+    engine.saveInitialState();
+    glWidget->update();
+}
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Engine init
-    engine.addBody(CelestialBody(Eigen::Vector3f(0.0f, 0.0f, 0.0f), Eigen::Vector3f(0.0f, 0.0f, 0.0f), 1000.0f));
-    engine.addBody(CelestialBody(Eigen::Vector3f(10.0f, 0.0f, 0.0f), Eigen::Vector3f(0.0f, 10.0f, 0.0f), 1.0f));
-    engine.addBody(CelestialBody(Eigen::Vector3f(0.0f, 20.0f, 0.0f), Eigen::Vector3f(-7.0f, 0.0f, 0.0f), 1.0f));
-    engine.addBody(CelestialBody(Eigen::Vector3f(0.0f, 0.0f, 15.0f), Eigen::Vector3f(0.0f, 5.0f, 0.0f), 0.5f));
-    engine.addBody(CelestialBody(Eigen::Vector3f(15.0f, 10.0f, 0.0f), Eigen::Vector3f(-2.0f, -2.0f, 1.0f), 0.01f));
+    // engine.addBody(CelestialBody(Eigen::Vector3f(0.0f, 0.0f, 0.0f), Eigen::Vector3f(0.0f, 0.0f, 0.0f), 1000.0f));
+    // engine.addBody(CelestialBody(Eigen::Vector3f(10.0f, 0.0f, 0.0f), Eigen::Vector3f(0.0f, 10.0f, 0.0f), 1.0f));
+    // engine.addBody(CelestialBody(Eigen::Vector3f(0.0f, 20.0f, 0.0f), Eigen::Vector3f(-7.0f, 0.0f, 0.0f), 1.0f));
+    // engine.addBody(CelestialBody(Eigen::Vector3f(0.0f, 0.0f, 15.0f), Eigen::Vector3f(0.0f, 5.0f, 0.0f), 0.5f));
+    // engine.addBody(CelestialBody(Eigen::Vector3f(15.0f, 10.0f, 0.0f), Eigen::Vector3f(-2.0f, -2.0f, 1.0f), 0.01f));
     // engine.addBody(CelestialBody(Eigen::Vector3f(10.0f, 0.0f, 15.0f), Eigen::Vector3f(0.0f, 0.0f, 0.0f), 100.0f));
 
     // Creating main, central widget for window
@@ -49,6 +83,14 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
     QPushButton *startButton = new QPushButton("Start symulacji", this);
     simLayout->addWidget(startButton);
+
+    QPushButton *loadButton = new QPushButton("Wczytaj z CSV", this);
+    QPushButton *resetButton = new QPushButton("Resetuj", this);
+    QPushButton *clearButton = new QPushButton("Wyczyść kosmos", this);
+
+    simLayout->addWidget(loadButton);
+    simLayout->addWidget(resetButton);
+    simLayout->addWidget(clearButton);
 
     simLayout->addWidget(new QLabel("Prędkość symulacji", this));
     QSlider *slider = new QSlider(Qt::Horizontal, this);
@@ -152,6 +194,33 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Planet selector
     connect(planetSelector, &QComboBox::currentIndexChanged, glWidget, [this](int index) {
         glWidget->setTrackedPlanetIndex(index - 1);
+    });
+
+    // Load from CSV button
+    connect(loadButton, &QPushButton::clicked, this, [this, startButton]() {
+        QString filename = QFileDialog::getOpenFileName(this, "Wybierz Układ", "", "Pliki CSV (*.csv);;Wszystkie pliki (*)");
+
+        // If filename is empty, then do nothing
+        if (filename.isEmpty()) return;
+
+        if (simTimer->isActive()) {
+            simTimer->stop();
+            startButton->setText("Start symulacji");
+        }
+
+        loadFromCSV(filename);
+    });
+
+    // Reset button
+    connect(resetButton, &QPushButton::clicked, this, [this]() {
+        engine.resetInitialState();
+        glWidget->update();
+    });
+
+    // Clear button
+    connect(clearButton, &QPushButton::clicked, this, [this]() {
+        engine.setBodies({});
+        glWidget->update();
     });
 }
 
