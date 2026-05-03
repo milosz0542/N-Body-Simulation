@@ -151,6 +151,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     visLayout->addWidget(new QLabel("Długość śladu:", this));
     visLayout->addWidget(trailSlider);
 
+    visLayout->addWidget(new QLabel("Gładkość / Rozdzielczość śladu: ", this));
+    QSlider *resolutionSlider = new QSlider(Qt::Horizontal, this);
+
+    resolutionSlider->setRange(0, 50);
+    resolutionSlider->setValue(5);
+    visLayout->addWidget(resolutionSlider);
+
     visLayout->addStretch();
     tabs->addTab(visTab, "Wizualizacja");
 
@@ -301,6 +308,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Trail slider
     connect(trailSlider, &QSlider::valueChanged, this, [this](int value) {
         engine.m_maxTrailLength = static_cast<size_t>(value);
+    });
+
+    connect(resolutionSlider, &QSlider::valueChanged, this, [this](int value) {
+        float distanceThreshold = value / 10.0f;
+        engine.setTrailResolution(distanceThreshold);
     });
 }
 

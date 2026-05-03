@@ -85,7 +85,7 @@ void GravityEngine::update(double deltaTime) {
 
     for (auto& body : bodies) {
         body.updateVelocity(deltaTime);
-        body.updateTrail(m_maxTrailLength);
+        body.updateTrail(m_maxTrailLength, m_minTrailDistanceSq);
     }
 }
 

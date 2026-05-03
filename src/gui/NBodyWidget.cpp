@@ -135,25 +135,26 @@ void NBodyWidget::initializeGL() {
         return;
     }
 
+    glGenBuffers(1, &m_trailVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, m_trailVBO);
+
+    GLsizeiptr bufferSize = MAX_BODIES * MAX_TRAIL_LENGTH * 3 * sizeof(float);
+
+    GLbitfield flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+
+    glBufferStorage(GL_ARRAY_BUFFER, bufferSize, nullptr, flags);
+
+    m_trailMappedPtr = (float*)glMapBufferRange(GL_ARRAY_BUFFER, 0, bufferSize, flags);
+
     trailVAO.create();
     trailVAO.bind();
 
-    trailVBO.create();
-    trailVBO.bind();
-    trailVBO.setUsagePattern(QOpenGLBuffer::DynamicDraw); // Dynamic draw, because trail updates every frame
+    glBindBuffer(GL_ARRAY_BUFFER, m_trailVBO);
 
-    trailVBO.allocate(100000 * 100 * 4 * sizeof(GLfloat));
-
-    // Attrib 0 (X, Y, Z)
-    this->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)0);
+    this->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (void*)0);
     this->glEnableVertexAttribArray(0);
 
-    // Attrib 1 (Alpha)
-    this->glVertexAttribPointer(1, 1, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(3 * sizeof(GLfloat)));
-    this->glEnableVertexAttribArray(1);
-
-    trailVBO.release();
-    trailVAO.release();
+    engine->m_maxTrailLength = MAX_TRAIL_LENGTH;
 }
 
 void NBodyWidget::resizeGL(int w, int h) {
@@ -239,12 +240,12 @@ void NBodyWidget::paintGL() {
 
     shaderProgram->setUniformValue("useVelocityColor", m_useVelocityColor);
 
-    gpuPositionBuffer = RenderUtils::preparePositionBuffer(engine->getBodies());
+    RenderUtils::fillPositionBuffer(engine->getBodies(), m_gpuPositionBuffer);
 
     // Now the magic that I do not understand begins
     VAO.bind();
     VBO.bind();
-    VBO.write(0, gpuPositionBuffer.data(), gpuPositionBuffer.size() * sizeof(GLfloat));
+    VBO.write(0, m_gpuPositionBuffer.data(), m_gpuPositionBuffer.size() * sizeof(GLfloat));
 
     // Draw
     this->glDrawArrays(GL_POINTS, 0, static_cast<GLsizei>(engine->getBodies().size()));
@@ -259,46 +260,40 @@ void NBodyWidget::paintGL() {
         QMatrix4x4 identityModel;
         trailShaderProgram->setUniformValue("model", identityModel);
 
-        trailVAO.bind();
-        trailVBO.bind();
-
-        std::vector<float> trailData;
         const auto& bodies = engine->getBodies();
 
-        size_t totalPoints = 0;
-        for (const auto& body : bodies) totalPoints += body.getTrailHistory().size();
-        trailData.reserve(totalPoints * 4);
+        int shaderTrailLength = (engine->m_maxTrailLength > 0) ? engine->m_maxTrailLength : 100;
+        trailShaderProgram->setUniformValue("maxTrailLength", shaderTrailLength);
 
-        for (const auto& body : bodies) {
-            const auto history = body.getTrailHistory();
-            size_t histSize = history.size();
+        // SAVE TO VRAM
+        if (m_trailMappedPtr) {
+            int floatIndex = 0;
+            for (const auto& body : bodies) {
+                const auto history = body.getTrailHistory();
+                size_t histSize = history.size();
 
-            for (size_t i = 0; i < histSize; ++i) {
-                trailData.push_back(history[i].x());
-                trailData.push_back(history[i].y());
-                trailData.push_back(history[i].z());
-
-                float alpha = 1.0f - (static_cast<float>(i) / static_cast<float>(histSize));
-                trailData.push_back(alpha);
+                for (size_t i = 0; i < histSize; ++i) {
+                    m_trailMappedPtr[floatIndex++] = history[i].x();
+                    m_trailMappedPtr[floatIndex++] = history[i].y();
+                    m_trailMappedPtr[floatIndex++] = history[i].z();
+                }
             }
         }
 
-        if (!trailData.empty()) {
-            trailVBO.write(0, trailData.data(), trailData.size() * sizeof(GLfloat));
-        }
+        trailVAO.bind();
 
         int offset = 0;
-
         for (const auto& body : bodies) {
             int count = body.getTrailHistory().size();
             if (count > 1) {
-                // Draw LINE STRIP
+                trailShaderProgram->setUniformValue("startOffset", offset);
+
                 this->glDrawArrays(GL_LINE_STRIP, offset, count);
             }
             offset += count;
         }
 
-        trailVBO.release();
+
         trailVAO.release();
         trailShaderProgram->release();
     }

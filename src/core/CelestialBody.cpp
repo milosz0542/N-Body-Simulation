@@ -44,8 +44,15 @@ void CelestialBody::updateVelocity(double deltaTime) {
     velocity += 0.5f * newAcceleration * deltaTime;
 }
 
-void CelestialBody::updateTrail(size_t maxLength) {
-    trailHistory.push_front(position);
+void CelestialBody::updateTrail(size_t maxLength, float minDistanceSq) {
+    if (trailHistory.empty()) {
+        trailHistory.push_front(position);
+    } else {
+        float distSq = (position - trailHistory.front()).squaredNorm();
+        if (distSq >= minDistanceSq) {
+            trailHistory.push_front(position);
+        }
+    }
 
     while (trailHistory.size() > maxLength) {
         trailHistory.pop_back();

@@ -43,6 +43,8 @@ private:
      */
     double softening = 0.1f;
 
+    float m_minTrailDistanceSq = 0.001f;
+
 public:
     GravityEngine() = default;
 
@@ -82,4 +84,8 @@ public:
     double calculateTotalEnergy() const;
 
     size_t m_maxTrailLength = 100;
+
+    void setTrailResolution(float minDistance) {
+        m_minTrailDistanceSq = minDistance * minDistance;
+    }
 };
