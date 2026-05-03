@@ -305,6 +305,8 @@ void NBodyWidget::paintGL() {
 
     shaderProgram->release();
     // And magic ends
+
+    emit frameRendered(); // Emits signal for FPS/TPS show.
 }
 
 void NBodyWidget::mousePressEvent(QMouseEvent *event) {

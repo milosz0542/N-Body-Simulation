@@ -28,6 +28,9 @@ private:
 
     std::vector<CelestialBody> initialBodies;
 
+    std::vector<Eigen::Vector3f> m_localForces;
+    int m_maxThreads;
+
     /**
      * @brief Gravitational constant G.
      * 

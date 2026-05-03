@@ -161,4 +161,7 @@ private:
     float targetPitch = 0.0f;
     float targetYaw = 0.0f;
     QVector3D targetCameraTarget = QVector3D(0.0f, 0.0f, 0.0f);
+
+signals:
+    void frameRendered();
 };

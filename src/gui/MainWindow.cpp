@@ -20,6 +20,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <QGroupBox>
 
 void MainWindow::loadFromCSV(QString filename) {
     std::ifstream file(filename.toStdString());
@@ -108,6 +109,20 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     QSlider *slider = new QSlider(Qt::Horizontal, this);
     simLayout->addWidget(slider);
 
+    QGroupBox *perfGroup = new QGroupBox("Wydajność (profilowanie)", this);
+    QFormLayout *perfLayout = new QFormLayout(perfGroup);
+
+    lblFps = new QLabel("---", this);
+    lblTps = new QLabel("---", this);
+
+    QFont monoFont("Courier New", 10, QFont::Bold);
+    lblFps->setFont(monoFont);
+    lblTps->setFont(monoFont);
+
+    perfLayout->addRow("FPS:", lblFps);
+    perfLayout->addRow("TPS:", lblTps);
+    simLayout->addWidget(perfGroup);
+
     simLayout->addStretch();
     tabs->addTab(simTab, "Symulacja");
 
@@ -171,6 +186,11 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
     glWidget->setEngine(&engine);
 
+    // FPS Counter
+    connect(glWidget, &NBodyWidget::frameRendered, this, [this]() {
+        m_frameCount++;
+    });
+
     // Timer - Main Sim Loop
     simTimer = new QTimer(this);
     connect(simTimer, &QTimer::timeout, this, [this]() {
@@ -184,10 +204,27 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
         for (int i = 0; i < stepsToSimulate; ++i) {
             engine.update(physics_dt);
+            m_tickCount++;
         }
 
         glWidget->update();
     });
+
+    // Stats Timer
+    QTimer *statsTimer = new QTimer(this);
+    connect(statsTimer, &QTimer::timeout, this, [this]() {
+        lblFps->setText(QString::number(m_frameCount));
+        lblTps->setText(QString::number(m_tickCount));
+
+        if (m_frameCount < 30) {
+            lblFps->setStyleSheet("color: red");
+        } else {
+            lblFps->setStyleSheet("color: green");
+        }
+
+        m_frameCount = 0;
+        m_tickCount = 0;
+    }); statsTimer->start(1000);
 
     // Telemetry Timer
     QTimer *telemetryTimer = new QTimer(this);

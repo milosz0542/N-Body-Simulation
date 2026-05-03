@@ -42,6 +42,14 @@ add_executable(NBodyProblem src/main.cpp
         src/core/CelestialBody.h
         src/render/shaders.qrc)
 
+if(CMAKE_BUILD_TYPE MATCHES "Release|RelWithDebInfo|MinSizeRel")
+    if(MSVC)
+        target_compile_options(NBodyProblem PRIVATE /O2 /arch:AVX2 /fp:fast)
+    else()
+        target_compile_options(NBodyProblem PRIVATE -O3 -march=native -ffast-math)
+    endif()
+endif()
+
 target_link_libraries(NBodyProblem
         Qt::Core
         Qt::Gui
