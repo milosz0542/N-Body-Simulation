@@ -10,7 +10,10 @@ TEST(RenderUtilsTest, PrepareFlatGPUBufferCorrectly) {
 
     bodies.emplace_back(Eigen::Vector3f(-5.0f, 0.0f, 15.5f), Eigen::Vector3f::Zero(), 200.0f);
 
-    std::vector<float> gpuBuffer = RenderUtils::preparePositionBuffer(bodies);
+    // std::vector<float> gpuBuffer = RenderUtils::preparePositionBuffer(bodies);
+
+    std::vector<GLfloat> gpuBuffer;
+    RenderUtils::fillPositionBuffer(bodies, gpuBuffer);
 
     ASSERT_EQ(gpuBuffer.size(), 10);
 
