@@ -5,8 +5,7 @@
 #pragma once
 
 #include <QtOpenGLWidgets/QOpenGLWidget>
-#include <QOpenGLFunctions>
-#include <QOpenGLFunctions_3_3_Core>
+#include <QOpenGLFunctions_4_4_Core>
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLShaderProgram>
@@ -27,7 +26,7 @@
  * positions, trails, and a background starfield. It provides camera controls
  * (orbiting, zooming) and supports different rendering modes.
  */
-class NBodyWidget : public QOpenGLWidget, protected QOpenGLFunctions {
+class NBodyWidget : public QOpenGLWidget, protected QOpenGLFunctions_4_4_Core {
     Q_OBJECT // Required by signals mechanism and Qt slots
 
 public:
@@ -123,11 +122,17 @@ protected:
 private:
     GravityEngine* engine = nullptr;
 
+    const int MAX_BODIES = 2000;
+    const int MAX_TRAIL_LENGTH = 1000;
+
     QOpenGLVertexArrayObject VAO;
     QOpenGLBuffer VBO;
 
     // Auxiliary buffer
-    std::vector<float> gpuPositionBuffer;
+    // std::vector<float> gpuPositionBuffer;
+
+    GLuint m_trailVBO = 0;
+    float *m_trailMappedPtr = nullptr;
 
     QOpenGLShaderProgram* shaderProgram;
 
@@ -161,6 +166,8 @@ private:
     float targetPitch = 0.0f;
     float targetYaw = 0.0f;
     QVector3D targetCameraTarget = QVector3D(0.0f, 0.0f, 0.0f);
+
+    std::vector<GLfloat> m_gpuPositionBuffer;
 
 signals:
     void frameRendered();

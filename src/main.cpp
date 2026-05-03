@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <QSurfaceFormat>
 #include "gui/MainWindow.h"
 #include "core/GravityEngine.h"
 #include "core/CelestialBody.h"
@@ -134,7 +135,11 @@ int main(int argc, char *argv[]) {
         runHeadlessMode(1000, 0.01f);
         return 0;
     } // Else -> run in window mode
-    
+    QSurfaceFormat format;
+    format.setVersion(4, 4);
+    format.setProfile(QSurfaceFormat::CoreProfile);
+    QSurfaceFormat::setDefaultFormat(format);
+
     QApplication a(argc, argv);
 
     MainWindow window;
