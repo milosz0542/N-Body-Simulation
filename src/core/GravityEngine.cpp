@@ -28,6 +28,7 @@ void GravityEngine::resetInitialState() {
 
 void GravityEngine::update(double deltaTime) {
     int n = static_cast<int>(bodies.size());
+    if (n == 0) return;
 
     // Position update and force reset
     for (auto& body : bodies) {
@@ -36,18 +37,25 @@ void GravityEngine::update(double deltaTime) {
     }
     
     double softeningSquared = softening * softening;
-
     int numThreads = omp_get_max_threads();
+    m_maxThreads = numThreads;
 
-    // 2D array [threads num] X [bodies]
-    std::vector<std::vector<Eigen::Vector3f>> localForces(
-        numThreads, std::vector<Eigen::Vector3f>(n, Eigen::Vector3f::Zero())
-        );
+    if (m_localForces.size() != static_cast<int>(numThreads * n)) {
+        m_localForces.resize(numThreads * n);
+    }
+
+    // // 2D array [threads num] X [bodies]
+    // std::vector<std::vector<Eigen::Vector3f>> localForces(
+    //     numThreads, std::vector<Eigen::Vector3f>(n, Eigen::Vector3f::Zero())
+    //     );
+
+    std::fill(m_localForces.begin(), m_localForces.end(), Eigen::Vector3f::Zero()); // Filling buffer with zeroes
 
     #pragma omp parallel
     {
         // Thread check
         int threadId = omp_get_thread_num();
+        int offset = threadId * n;
 
         #pragma omp for schedule(dynamic)
         for (int i = 0; i < n; ++i) {
@@ -60,8 +68,8 @@ void GravityEngine::update(double deltaTime) {
 
                 Eigen::Vector3f forceVec = forceMagnitude * r_vec;
 
-                localForces[threadId][i] += forceVec;
-                localForces[threadId][j] -= forceVec;
+                m_localForces[offset + i] += forceVec;
+                m_localForces[offset + j] -= forceVec;
             }
         }
     } // End of pragma omp parallel
@@ -70,7 +78,7 @@ void GravityEngine::update(double deltaTime) {
     for (int i = 0; i < n; ++i) {
         Eigen::Vector3f totalForce = Eigen::Vector3f::Zero();
         for (int t = 0; t < numThreads; ++t) {
-            totalForce += localForces[t][i];
+            totalForce += m_localForces[t * n + i];
         }
         bodies[i].addForce(totalForce);
     }

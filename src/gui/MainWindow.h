@@ -8,6 +8,7 @@
 #include <QComboBox>
 #include "NBodyWidget.h"
 #include "core/GravityEngine.h"
+#include <QLabel>
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -20,6 +21,10 @@ public:
 private:
     float m_timeMultiplier = 1.0f;
     QTimer *simTimer;
+    int m_frameCount = 0;
+    int m_tickCount = 0;
+    QLabel *lblFps;
+    QLabel *lblTps;
     NBodyWidget *glWidget;
     QComboBox *planetSelector;
     void updatePlanetSelector();
