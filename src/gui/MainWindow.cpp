@@ -145,7 +145,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     QWidget *camTab = new QWidget();
     QVBoxLayout *camLayout = new QVBoxLayout(camTab);
 
-    camLayout->addWidget(new QLabel("Sledź obiekt", this));
+    camLayout->addWidget(new QLabel("Śledź obiekt", this));
     planetSelector = new QComboBox(this);
     updatePlanetSelector();
     camLayout->addWidget(planetSelector);
