@@ -77,4 +77,6 @@ public:
      * @return The total energy of the system.
      */
     double calculateTotalEnergy() const;
+
+    size_t m_maxTrailLength = 100;
 };
