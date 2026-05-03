@@ -135,7 +135,7 @@ private:
     QMatrix4x4 viewMatrix;
 
     bool m_drawStarfield = false;
-    bool m_drawTrails = true;
+    bool m_drawTrails = false;
     bool m_useVelocityColor = true;
     bool m_cinematicMode = false;
     int m_trackedPlanetIndex = -1;

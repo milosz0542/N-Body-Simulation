@@ -15,6 +15,7 @@
 #include <QTabWidget>
 #include <QCheckBox>
 #include <QFileDialog>
+#include <QFormLayout>
 #include <cmath>
 #include <fstream>
 #include <iostream>
@@ -46,18 +47,29 @@ void MainWindow::loadFromCSV(QString filename) {
 
     engine.setBodies(newBodies);
     engine.saveInitialState();
+    updatePlanetSelector();
     glWidget->update();
 }
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
-    // Engine init
-    // engine.addBody(CelestialBody(Eigen::Vector3f(0.0f, 0.0f, 0.0f), Eigen::Vector3f(0.0f, 0.0f, 0.0f), 1000.0f));
-    // engine.addBody(CelestialBody(Eigen::Vector3f(10.0f, 0.0f, 0.0f), Eigen::Vector3f(0.0f, 10.0f, 0.0f), 1.0f));
-    // engine.addBody(CelestialBody(Eigen::Vector3f(0.0f, 20.0f, 0.0f), Eigen::Vector3f(-7.0f, 0.0f, 0.0f), 1.0f));
-    // engine.addBody(CelestialBody(Eigen::Vector3f(0.0f, 0.0f, 15.0f), Eigen::Vector3f(0.0f, 5.0f, 0.0f), 0.5f));
-    // engine.addBody(CelestialBody(Eigen::Vector3f(15.0f, 10.0f, 0.0f), Eigen::Vector3f(-2.0f, -2.0f, 1.0f), 0.01f));
-    // engine.addBody(CelestialBody(Eigen::Vector3f(10.0f, 0.0f, 15.0f), Eigen::Vector3f(0.0f, 0.0f, 0.0f), 100.0f));
+void MainWindow::updatePlanetSelector() {
+    if (!planetSelector) return;
+    
+    planetSelector->blockSignals(true);
+    planetSelector->clear();
+    planetSelector->addItem("Wolna Kamera (Środek)");
+    
+    const auto& bodies = engine.getBodies();
+    for (size_t i = 0; i < bodies.size(); ++i) {
+        QString planetName = QString("Obiekt %1 (Masa: %2)").arg(i).arg(bodies[i].mass);
+        planetSelector->addItem(planetName);
+    }
+    planetSelector->blockSignals(false);
+    
+    // Reset tracking if bodies changed
+    glWidget->setTrackedPlanetIndex(-1);
+}
 
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Creating main, central widget for window
     QWidget *centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
@@ -117,6 +129,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     visLayout->addWidget(speedColorCheck);
     visLayout->addWidget(cinematicModeCheck);
 
+    QSlider *trailSlider = new QSlider(Qt::Horizontal, this);
+    trailSlider->setRange(1, 1000);
+    trailSlider->setValue(100);
+
+    visLayout->addWidget(new QLabel("Długość śladu:", this));
+    visLayout->addWidget(trailSlider);
+
     visLayout->addStretch();
     tabs->addTab(visTab, "Wizualizacja");
 
@@ -126,17 +145,20 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     QWidget *camTab = new QWidget();
     QVBoxLayout *camLayout = new QVBoxLayout(camTab);
 
-    camLayout->addWidget(new QLabel("Sledź obiekt", this));
-    QComboBox *planetSelector = new QComboBox(this);
-    planetSelector->addItem("Wolna Kamera (Środek)");
-
-    // Loading planets to dropdown box
-    const auto& bodies = engine.getBodies();
-    for (size_t i = 0; i < bodies.size(); ++i) {
-        QString planetName = QString("Obiekt %1 (Masa: %2)").arg(i).arg(bodies[i].mass);
-        planetSelector->addItem(planetName);
-    }
+    camLayout->addWidget(new QLabel("Śledź obiekt", this));
+    planetSelector = new QComboBox(this);
+    updatePlanetSelector();
     camLayout->addWidget(planetSelector);
+
+    QFormLayout *telemetryLayout = new QFormLayout();
+    QLabel *lblMass = new QLabel("---");
+    QLabel *lblVel = new QLabel("---");
+    QLabel *lblPos = new QLabel("---");
+
+    telemetryLayout->addRow("Masa:", lblMass);
+    telemetryLayout->addRow("Prędkość:", lblVel);
+    telemetryLayout->addRow("Pozycja:", lblPos);
+    camLayout->addLayout(telemetryLayout);
 
     camLayout->addStretch();
     tabs->addTab(camTab, "Kamera");
@@ -166,6 +188,20 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
         glWidget->update();
     });
+
+    // Telemetry Timer
+    QTimer *telemetryTimer = new QTimer(this);
+    connect(telemetryTimer, &QTimer::timeout, this, [this, lblMass, lblVel, lblPos]() {
+        int idx = planetSelector->currentIndex();
+        if (idx > 0 && idx <= engine.getBodies().size()) {
+            const auto& b = engine.getBodies()[idx - 1];
+            lblMass->setText(QString::number(b.mass, 'f', 3));
+            lblVel->setText(QString::number(b.velocity.norm(), 'f', 2) + " j/s");
+            lblPos->setText(QString("X:%1, Y:%2, Z:%3").arg(b.position.x(), 0, 'f', 1).arg(b.position.y(), 0, 'f', 1).arg(b.position.z(), 0, 'f', 1));
+        } else {
+            lblMass->setText("---"); lblVel->setText("---"); lblPos->setText("---");
+        }
+    }); telemetryTimer->start(100);
 
     // Start/stop of simulation (I hate start stop in my vw golf)
     connect(startButton, &QPushButton::clicked, this, [this, startButton]() {
@@ -214,13 +250,20 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     // Reset button
     connect(resetButton, &QPushButton::clicked, this, [this]() {
         engine.resetInitialState();
+        updatePlanetSelector();
         glWidget->update();
     });
 
     // Clear button
     connect(clearButton, &QPushButton::clicked, this, [this]() {
         engine.setBodies({});
+        updatePlanetSelector();
         glWidget->update();
+    });
+
+    // Trail slider
+    connect(trailSlider, &QSlider::valueChanged, this, [this](int value) {
+        engine.m_maxTrailLength = static_cast<size_t>(value);
     });
 }
 

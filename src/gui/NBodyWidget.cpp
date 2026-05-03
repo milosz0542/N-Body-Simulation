@@ -197,8 +197,9 @@ void NBodyWidget::paintGL() {
 
     if (m_trackedPlanetIndex >= 0 && m_trackedPlanetIndex < engine->getBodies().size()) {
         Eigen::Vector3f planetPos = engine->getBodies()[m_trackedPlanetIndex].position;
-
         targetCameraTarget = QVector3D(planetPos.x(), planetPos.y(), planetPos.z());
+    } else {
+        targetCameraTarget = QVector3D(0.0f, 0.0f, 0.0f);
     }
 
     // Camera interpolate

@@ -44,9 +44,10 @@ void CelestialBody::updateVelocity(double deltaTime) {
     velocity += 0.5f * newAcceleration * deltaTime;
 }
 
-void CelestialBody::updateTrail() {
+void CelestialBody::updateTrail(size_t maxLength) {
     trailHistory.push_front(position);
-    if (trailHistory.size() > 100) {
+
+    while (trailHistory.size() > maxLength) {
         trailHistory.pop_back();
     }
 }

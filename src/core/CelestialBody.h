@@ -108,7 +108,7 @@ public:
     /**
      * @brief Records the current position into the trail history.
      */
-    void updateTrail();
+    void updateTrail(size_t maxLength);
 
     /**
      * @brief Retrieves the position history of the body.

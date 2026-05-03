@@ -5,6 +5,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QComboBox>
 #include "NBodyWidget.h"
 #include "core/GravityEngine.h"
 
@@ -20,5 +21,7 @@ private:
     float m_timeMultiplier = 1.0f;
     QTimer *simTimer;
     NBodyWidget *glWidget;
+    QComboBox *planetSelector;
+    void updatePlanetSelector();
     GravityEngine engine;
 };
