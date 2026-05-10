@@ -133,22 +133,14 @@ void GravityEngine::insertToNode(OctreeNode* node, CelestialBody* newBody, int d
         return;
     }
 
-    // ── occupied leaf: split it ──
-    // Push the existing body DIRECTLY into its child octant so that
-    // this node becomes a proper internal node before we continue.
     if (node->body != nullptr) {
         CelestialBody* existing = node->body;
         node->body = nullptr;
-        // NOTE: do NOT reset totalMass/centerOfMass here – they already hold
-        // the correct aggregate for `existing`.
-
         int existingOctant = getOctant(node, existing);
         createChild(node, existingOctant);
         insertToNode(node->children[existingOctant].get(), existing, depth + 1);
-        // node is now an internal node; fall through to insert newBody.
     }
 
-    // ── internal node: update aggregate and recurse for newBody ──
     float newTM = node->totalMass + newBody->mass;
     node->centerOfMass = (node->centerOfMass * node->totalMass +
                           newBody->position   * newBody->mass) / newTM;
