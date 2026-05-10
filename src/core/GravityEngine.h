@@ -44,29 +44,28 @@ struct OctreeNode {
  * of celestial bodies over time. The engine implements numerical methods to compute
  * the forces acting on the bodies, update their positions and velocities, and advance
  * the simulation in discrete time steps.
+ *
+ * ### Velocity Verlet integration
+ * Each call to update(dt) performs one complete leapfrog/Velocity-Verlet step:
+ *   1. x(t+dt) = x(t) + v(t)*dt + 0.5*a(t)*dt^2   [updatePosition]
+ *   2. F(t+dt) computed from new positions          [calculateForces*]
+ *   3. v(t+dt) = v(t) + 0.5*(a(t)+a(t+dt))*dt      [updateVelocity]
+ *
+ * IMPORTANT: F(t=0) must be initialised before the first update() call.
+ * Call initializeForces() (or saveInitialState()/setBodies()) once after
+ * adding all bodies and before starting the simulation loop.
  */
 class GravityEngine {
 private:
-    /**
-     * @brief A collection of celestial bodies managed by the gravity simulation engine.
-     */
     std::vector<CelestialBody> bodies;
-
     std::vector<CelestialBody> initialBodies;
 
     std::vector<Eigen::Vector3f> m_localForces;
-    int m_maxThreads;
+    int m_maxThreads = 0;
 
-    /**
-     * @brief Gravitational constant G.
-     * 
-     * In this simulation, it's set to 1.0 for simplicity in normalized units.
-     */
     const double G = 1;
 
-    /**
-     * @brief Softening parameter to prevent singularities during close encounters.
-     */
+    /// Softening length epsilon (prevents 1/r singularity).
     double softening = 0.1;
 
     float m_minTrailDistanceSq = 0.001f;
@@ -74,65 +73,56 @@ private:
     ForceAlgorithm m_forceAlgorithm = ForceAlgorithm::Naive;
     float m_theta = 0.5f;
 
+    // ------------------------------------------------------------------ force calculation
     void calculateForcesNaive();
     void calculateForcesBarnesHut();
 
     /**
-     * @brief Inserts a body into the octree node recursively.
-     * @param node   Target octree node.
-     * @param body   Body to insert.
-     * @param depth  Current recursion depth (used to cap recursion for co-located bodies).
+     * @brief Insert a body into the octree recursively.
+     * @param depth Current recursion depth; capped at 64 to handle co-located bodies.
      */
     void insertToNode(OctreeNode* node, CelestialBody* body, int depth = 0);
 
-    /**
-     * @brief Recursively computes the Barnes-Hut force on a target body from a node.
-     * @param node        Current octree node.
-     * @param target      The body receiving the force.
-     * @param theta       Barnes-Hut opening angle threshold.
-     * @param G           Gravitational constant.
-     * @param softeningSq Squared softening length.
-     * @return Force vector acting on target.
-     */
+    /// Recursively compute Barnes-Hut force on @p target from subtree @p node.
     Eigen::Vector3f calculateBarnesHutForce(OctreeNode* node, CelestialBody* target,
                                              float theta, double G, double softeningSq);
 
 public:
     GravityEngine() = default;
 
-    /**
-     * @brief Adds a celestial body to the gravity simulation.
-     * @param body The celestial body to be added.
-     */
     void addBody(const CelestialBody& body);
-
     void setBodies(const std::vector<CelestialBody>& newBodies);
 
+    /**
+     * @brief Snapshot the current state as the "initial" state AND
+     *        compute F(t=0) so the Verlet integrator starts correctly.
+     *
+     * Must be called once after all bodies are added and before the
+     * first update() call.
+     */
     void saveInitialState();
+
+    /// Restore bodies to the saved initial state and re-initialise forces.
     void resetInitialState();
 
     /**
-     * @brief Updates the state of the simulation by one time step.
+     * @brief Compute forces on all bodies WITHOUT advancing time.
      *
-     * Computes gravitational forces between all pairs of bodies (or via Barnes-Hut tree),
-     * then updates their positions and velocities using Velocity Verlet integration.
-     *
-     * @param deltaTime The time step for the simulation update.
+     * Call this once after adding bodies (or changing the force algorithm)
+     * to prime F(t=0) for the Velocity Verlet integrator.
+     */
+    void initializeForces();
+
+    /**
+     * @brief Advance the simulation by one time step (Velocity Verlet).
+     * @param deltaTime Time step dt.
      */
     void update(double deltaTime);
 
-    /**
-     * @brief Retrieves the collection of celestial bodies.
-     * @return A constant reference to the vector of celestial bodies.
-     */
     const std::vector<CelestialBody>& getBodies() const;
 
     /**
-     * @brief Calculates the total energy of the system.
-     *
-     * Sum of kinetic energy (0.5 * m * v^2) and potential energy (-G * m1 * m2 / r).
-     *
-     * @return The total energy of the system.
+     * @brief Total mechanical energy: kinetic + potential (with softening).
      */
     double calculateTotalEnergy() const;
 
@@ -142,7 +132,11 @@ public:
         m_minTrailDistanceSq = minDistance * minDistance;
     }
 
-    void setForceAlgorithm(ForceAlgorithm algo) { m_forceAlgorithm = algo; }
+    void setForceAlgorithm(ForceAlgorithm algo) {
+        m_forceAlgorithm = algo;
+        // Re-prime forces so the next update() uses the correct algorithm from the start.
+        if (!bodies.empty()) initializeForces();
+    }
     ForceAlgorithm getForceAlgorithm() const { return m_forceAlgorithm; }
 
     void setTheta(float theta) { m_theta = theta; }
