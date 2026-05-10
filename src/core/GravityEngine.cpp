@@ -35,7 +35,114 @@ void GravityEngine::update(double deltaTime) {
         body.updatePosition(deltaTime);
         body.resetForce();
     }
-    
+
+    if (m_forceAlgorithm == ForceAlgorithm::Naive) {
+        calculateForcesNaive();
+    } else if (m_forceAlgorithm == ForceAlgorithm::BarnesHut) {
+        calculateForcesBarnesHut();
+    }
+
+    for (auto& body : bodies) {
+        body.updateVelocity(deltaTime);
+        body.updateTrail(m_maxTrailLength, m_minTrailDistanceSq);
+    }
+}
+
+const std::vector<CelestialBody>& GravityEngine::getBodies() const { return bodies; }
+
+double GravityEngine::calculateTotalEnergy() const {
+    double totalKinetic = 0.0;
+    double totalPotential = 0.0;
+    int n = static_cast<int>(bodies.size());
+
+    // Multithread totalKinetic
+    #pragma omp parallel for reduction(+:totalKinetic)
+    for (int i = 0; i < n; ++i) {
+        double speedSquared = bodies[i].velocity.squaredNorm();
+        totalKinetic += 0.5f * bodies[i].mass * speedSquared;
+    }
+
+    // Multithread totalPotential
+    double softeningSquared = softening * softening;
+    #pragma omp parallel for schedule(dynamic) reduction(+:totalPotential)
+    for (int i = 0; i < n; ++i) {
+        for (int j = i+1; j < n; ++j) {
+            double r_sq = (bodies[i].position - bodies[j].position).squaredNorm() + softeningSquared;
+            double distance = std::sqrt(r_sq);
+            totalPotential += -(G * bodies[i].mass * bodies[j].mass) / distance;
+        }
+    }
+
+    return totalKinetic + totalPotential;
+}
+
+void GravityEngine::insertToNode(OctreeNode *node, CelestialBody *newBody) {
+    if (node->isLeaf() && node->body == nullptr) {
+        node->body = newBody;
+        node->totalMass = newBody->mass;
+        node->centerOfMass = newBody->position;
+        return;
+    }
+
+    if (node->body) {
+        CelestialBody* existingBody = node->body;
+        node->body = nullptr;
+
+        // Reset mass to redistribute it into children
+        node->totalMass = 0;
+        node->centerOfMass = Eigen::Vector3f::Zero();
+
+        insertToNode(node, existingBody);
+    }
+
+    float newTotalMass = node->totalMass + newBody->mass;
+    node->centerOfMass = (node->centerOfMass * node->totalMass + newBody->position * newBody->mass) / newTotalMass;
+    node->totalMass = newTotalMass;
+
+    // Find sub-square for newBody
+    int octant = 0;
+    if (newBody->position.x() >= node->center.x()) octant |= 1;
+    if (newBody->position.y() >= node->center.y()) octant |= 2;
+    if (newBody->position.z() >= node->center.z()) octant |= 4;
+
+    if (!node->children[octant]) {
+        float newSize = node->size / 2.0f;
+        Eigen::Vector3f newCenter = node->center;
+        newCenter.x() += (octant & 1) ? newSize / 4.0f : -newSize / 4.0f;
+        newCenter.y() += (octant & 2) ? newSize / 4.0f : -newSize / 4.0f;
+        newCenter.z() += (octant & 4) ? newSize / 4.0f : -newSize / 4.0f;
+        node->children[octant] = std::make_unique<OctreeNode>(newCenter, newSize);
+    }
+
+    insertToNode(node->children[octant].get(), newBody);
+}
+
+Eigen::Vector3f GravityEngine::calculateBarnesHutForce(OctreeNode *node, CelestialBody *target, float theta, double G, double softeningSq) {
+    if (!node || (node->body == target)) return Eigen::Vector3f::Zero();
+
+    Eigen::Vector3f r_vec = node->centerOfMass - target->position;
+    float dist_sq = r_vec.squaredNorm();
+    float dist = std::sqrt(dist_sq);
+
+    // Barnes-hut criterion: s / d < theta
+    if (node->isLeaf() || (node->size / dist < theta)) {
+        double r_sq = dist_sq + softeningSq;
+        double r = std::sqrt(r_sq);
+        double forceMagnitude = (G * target->mass * node->totalMass) / (r_sq * r);
+        return forceMagnitude * r_vec;
+    } else {
+        Eigen::Vector3f totalForce = Eigen::Vector3f::Zero();
+        for (int i = 0; i < 8; ++i) {
+            if (node->children[i]) {
+                totalForce += calculateBarnesHutForce(node->children[i].get(), target, theta, G, softeningSq);
+            }
+        }
+        return totalForce;
+    }
+}
+
+void GravityEngine::calculateForcesNaive() {
+    int n = static_cast<int>(bodies.size());
     double softeningSquared = softening * softening;
     int numThreads = omp_get_max_threads();
     m_maxThreads = numThreads;
@@ -82,39 +189,43 @@ void GravityEngine::update(double deltaTime) {
         }
         bodies[i].addForce(totalForce);
     }
-
-    for (auto& body : bodies) {
-        body.updateVelocity(deltaTime);
-        body.updateTrail(m_maxTrailLength, m_minTrailDistanceSq);
-    }
 }
 
-const std::vector<CelestialBody>& GravityEngine::getBodies() const { return bodies; }
+void GravityEngine::calculateForcesBarnesHut() {
+    if (bodies.empty()) return;
 
-double GravityEngine::calculateTotalEnergy() const {
-    double totalKinetic = 0.0;
-    double totalPotential = 0.0;
-    int n = static_cast<int>(bodies.size());
+    float minX = bodies[0].position.x(), maxX = minX;
+    float minY = bodies[0].position.y(), maxY = minY;
+    float minZ = bodies[0].position.z(), maxZ = minZ;
 
-    // Multithread totalKinetic
-    #pragma omp parallel for reduction(+:totalKinetic)
-    for (int i = 0; i < n; ++i) {
-        double speedSquared = bodies[i].velocity.squaredNorm();
-        totalKinetic += 0.5f * bodies[i].mass * speedSquared;
+    for (size_t i = 1; i < bodies.size(); ++i) {
+        const auto& pos = bodies[i].position;
+        if (pos.x() < minX) minX = pos.x();
+        if (pos.x() > maxX) maxX = pos.x();
+        if (pos.y() < minY) minY = pos.y();
+        if (pos.y() > maxY) maxY = pos.y();
+        if (pos.z() < minZ) minZ = pos.z();
+        if (pos.z() > maxZ) maxZ = pos.z();
     }
 
-    // Multithread totalPotential
-    double softeningSquared = softening * softening;
-    #pragma omp parallel for schedule(dynamic) reduction(+:totalPotential)
-    for (int i = 0; i < n; ++i) {
-        for (int j = i+1; j < n; ++j) {
-            double r_sq = (bodies[i].position - bodies[j].position).squaredNorm() + softeningSquared;
-            double distance = std::sqrt(r_sq);
-            totalPotential += -(G * bodies[i].mass * bodies[j].mass) / distance;
-        }
+    Eigen::Vector3f center((minX + maxX)/2, (minY + maxY)/2, (minZ + maxZ)/2);
+    float maxSize = std::max({maxX - minX, maxY - minY, maxZ - minZ});
+    maxSize *= 1.01f; // error margin
+
+    auto root = std::make_unique<OctreeNode>(center, maxSize);
+
+    for (auto& body : bodies) {
+        insertToNode(root.get(), &body);
     }
 
-    return totalKinetic + totalPotential;
+    double softeningSq = softening * softening;
+    int n = bodies.size();
+
+    #pragma omp parallel for schedule(dynamic)
+    for (int i = 0; i < n; ++i) {
+        Eigen::Vector3f f = calculateBarnesHutForce(root.get(), &bodies[i], m_theta, G, softeningSq);
+        bodies[i].addForce(f);
+    }
 }
 
 // void GravityEngine::setSoftening(float softening) {

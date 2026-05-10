@@ -10,6 +10,32 @@
 #include "CelestialBody.h"
 #include <vector>
 
+enum class ForceAlgorithm {
+    Naive,
+    BarnesHut
+};
+
+struct OctreeNode {
+    Eigen::Vector3f center;
+    float size;
+
+    float totalMass = 0.0f;
+    Eigen::Vector3f centerOfMass = Eigen::Vector3f::Zero();
+
+    CelestialBody* body = nullptr;
+
+    std::unique_ptr<OctreeNode> children[8];
+
+    OctreeNode(Eigen::Vector3f c, float s) : center(c), size(s) {}
+
+    bool isLeaf() const {
+        for (const auto& child : children) {
+            if (child) return false;
+        }
+        return true;
+    }
+};
+
 /**
  * @class GravityEngine
  * @brief A simulation engine for modeling gravitational interactions between celestial bodies.
@@ -44,6 +70,12 @@ private:
     double softening = 0.1f;
 
     float m_minTrailDistanceSq = 0.001f;
+
+    ForceAlgorithm m_forceAlgorithm = ForceAlgorithm::Naive;
+    float m_theta = 0.5f;
+
+    void calculateForcesNaive();
+    void calculateForcesBarnesHut();
 
 public:
     GravityEngine() = default;
@@ -88,4 +120,11 @@ public:
     void setTrailResolution(float minDistance) {
         m_minTrailDistanceSq = minDistance * minDistance;
     }
+
+    void setForceAlgorithm(ForceAlgorithm algorithm) { m_forceAlgorithm = algorithm; }
+    void setTheta(float theta) { m_theta = theta; }
+
+    void insertToNode(OctreeNode* node, CelestialBody* newBody);
+    Eigen::Vector3f calculateBarnesHutForce(OctreeNode* node, CelestialBody* target, float theta, double G, double softeningSq);
+
 };
