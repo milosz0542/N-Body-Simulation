@@ -76,7 +76,21 @@ double GravityEngine::calculateTotalEnergy() const {
     return totalKinetic + totalPotential;
 }
 
-void GravityEngine::insertToNode(OctreeNode *node, CelestialBody *newBody) {
+void GravityEngine::insertToNode(OctreeNode* node, CelestialBody* newBody, int depth) {
+    // BUG FIX #3: Limit recursion depth to prevent infinite recursion
+    // when two bodies occupy the same (or nearly identical) position.
+    if (depth > 64) {
+        // Bodies are essentially co-located: just accumulate mass into this node
+        // without descending further.
+        float newTotalMass = node->totalMass + newBody->mass;
+        if (newTotalMass > 0.0f) {
+            node->centerOfMass = (node->centerOfMass * node->totalMass +
+                                  newBody->position * newBody->mass) / newTotalMass;
+        }
+        node->totalMass = newTotalMass;
+        return;
+    }
+
     if (node->isLeaf() && node->body == nullptr) {
         node->body = newBody;
         node->totalMass = newBody->mass;
@@ -92,42 +106,48 @@ void GravityEngine::insertToNode(OctreeNode *node, CelestialBody *newBody) {
         node->totalMass = 0;
         node->centerOfMass = Eigen::Vector3f::Zero();
 
-        insertToNode(node, existingBody);
+        insertToNode(node, existingBody, depth + 1);
     }
 
     float newTotalMass = node->totalMass + newBody->mass;
     node->centerOfMass = (node->centerOfMass * node->totalMass + newBody->position * newBody->mass) / newTotalMass;
     node->totalMass = newTotalMass;
 
-    // Find sub-square for newBody
+    // Find sub-octant for newBody
     int octant = 0;
     if (newBody->position.x() >= node->center.x()) octant |= 1;
     if (newBody->position.y() >= node->center.y()) octant |= 2;
     if (newBody->position.z() >= node->center.z()) octant |= 4;
 
     if (!node->children[octant]) {
+        // BUG FIX #1: Child size is node->size/2, so child center must be offset
+        // by size/4 (= newSize/2) from the parent center — NOT by newSize/4.
         float newSize = node->size / 2.0f;
+        float offset  = newSize / 2.0f;   // = node->size / 4.0f
         Eigen::Vector3f newCenter = node->center;
-        newCenter.x() += (octant & 1) ? newSize / 4.0f : -newSize / 4.0f;
-        newCenter.y() += (octant & 2) ? newSize / 4.0f : -newSize / 4.0f;
-        newCenter.z() += (octant & 4) ? newSize / 4.0f : -newSize / 4.0f;
+        newCenter.x() += (octant & 1) ? offset : -offset;
+        newCenter.y() += (octant & 2) ? offset : -offset;
+        newCenter.z() += (octant & 4) ? offset : -offset;
         node->children[octant] = std::make_unique<OctreeNode>(newCenter, newSize);
     }
 
-    insertToNode(node->children[octant].get(), newBody);
+    insertToNode(node->children[octant].get(), newBody, depth + 1);
 }
 
-Eigen::Vector3f GravityEngine::calculateBarnesHutForce(OctreeNode *node, CelestialBody *target, float theta, double G, double softeningSq) {
+Eigen::Vector3f GravityEngine::calculateBarnesHutForce(OctreeNode* node, CelestialBody* target,
+                                                        float theta, double G, double softeningSq) {
     if (!node || (node->body == target)) return Eigen::Vector3f::Zero();
 
     Eigen::Vector3f r_vec = node->centerOfMass - target->position;
     float dist_sq = r_vec.squaredNorm();
-    float dist = std::sqrt(dist_sq);
 
-    // Barnes-hut criterion: s / d < theta
-    if (node->isLeaf() || (node->size / dist < theta)) {
-        double r_sq = dist_sq + softeningSq;
-        double r = std::sqrt(r_sq);
+    // BUG FIX #2: Use softened distance in the Barnes-Hut criterion (s/d < theta)
+    // to avoid division by zero when dist == 0 (bodies at identical positions).
+    float dist_softened = std::sqrt(dist_sq + static_cast<float>(softeningSq));
+
+    if (node->isLeaf() || (node->size / dist_softened < theta)) {
+        double r_sq  = dist_sq + softeningSq;
+        double r     = std::sqrt(r_sq);
         double forceMagnitude = (G * target->mass * node->totalMass) / (r_sq * r);
         return forceMagnitude * r_vec;
     } else {
@@ -147,20 +167,14 @@ void GravityEngine::calculateForcesNaive() {
     int numThreads = omp_get_max_threads();
     m_maxThreads = numThreads;
 
-    if (m_localForces.size() != static_cast<int>(numThreads * n)) {
+    if (m_localForces.size() != static_cast<size_t>(numThreads * n)) {
         m_localForces.resize(numThreads * n);
     }
 
-    // // 2D array [threads num] X [bodies]
-    // std::vector<std::vector<Eigen::Vector3f>> localForces(
-    //     numThreads, std::vector<Eigen::Vector3f>(n, Eigen::Vector3f::Zero())
-    //     );
-
-    std::fill(m_localForces.begin(), m_localForces.end(), Eigen::Vector3f::Zero()); // Filling buffer with zeroes
+    std::fill(m_localForces.begin(), m_localForces.end(), Eigen::Vector3f::Zero());
 
     #pragma omp parallel
     {
-        // Thread check
         int threadId = omp_get_thread_num();
         int offset = threadId * n;
 
@@ -208,18 +222,18 @@ void GravityEngine::calculateForcesBarnesHut() {
         if (pos.z() > maxZ) maxZ = pos.z();
     }
 
-    Eigen::Vector3f center((minX + maxX)/2, (minY + maxY)/2, (minZ + maxZ)/2);
+    Eigen::Vector3f center((minX + maxX) / 2.0f, (minY + maxY) / 2.0f, (minZ + maxZ) / 2.0f);
     float maxSize = std::max({maxX - minX, maxY - minY, maxZ - minZ});
     maxSize *= 1.01f; // error margin
 
     auto root = std::make_unique<OctreeNode>(center, maxSize);
 
     for (auto& body : bodies) {
-        insertToNode(root.get(), &body);
+        insertToNode(root.get(), &body, 0);
     }
 
     double softeningSq = softening * softening;
-    int n = bodies.size();
+    int n = static_cast<int>(bodies.size());
 
     #pragma omp parallel for schedule(dynamic)
     for (int i = 0; i < n; ++i) {
