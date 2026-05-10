@@ -67,7 +67,7 @@ private:
     /**
      * @brief Softening parameter to prevent singularities during close encounters.
      */
-    double softening = 0.1f;
+    double softening = 0.1;
 
     float m_minTrailDistanceSq = 0.001f;
 
@@ -76,6 +76,26 @@ private:
 
     void calculateForcesNaive();
     void calculateForcesBarnesHut();
+
+    /**
+     * @brief Inserts a body into the octree node recursively.
+     * @param node   Target octree node.
+     * @param body   Body to insert.
+     * @param depth  Current recursion depth (used to cap recursion for co-located bodies).
+     */
+    void insertToNode(OctreeNode* node, CelestialBody* body, int depth = 0);
+
+    /**
+     * @brief Recursively computes the Barnes-Hut force on a target body from a node.
+     * @param node        Current octree node.
+     * @param target      The body receiving the force.
+     * @param theta       Barnes-Hut opening angle threshold.
+     * @param G           Gravitational constant.
+     * @param softeningSq Squared softening length.
+     * @return Force vector acting on target.
+     */
+    Eigen::Vector3f calculateBarnesHutForce(OctreeNode* node, CelestialBody* target,
+                                             float theta, double G, double softeningSq);
 
 public:
     GravityEngine() = default;
@@ -90,11 +110,12 @@ public:
 
     void saveInitialState();
     void resetInitialState();
+
     /**
      * @brief Updates the state of the simulation by one time step.
      *
-     * Computes gravitational forces between all pairs of bodies, then updates
-     * their positions and velocities.
+     * Computes gravitational forces between all pairs of bodies (or via Barnes-Hut tree),
+     * then updates their positions and velocities using Velocity Verlet integration.
      *
      * @param deltaTime The time step for the simulation update.
      */
@@ -121,10 +142,9 @@ public:
         m_minTrailDistanceSq = minDistance * minDistance;
     }
 
-    void setForceAlgorithm(ForceAlgorithm algorithm) { m_forceAlgorithm = algorithm; }
+    void setForceAlgorithm(ForceAlgorithm algo) { m_forceAlgorithm = algo; }
+    ForceAlgorithm getForceAlgorithm() const { return m_forceAlgorithm; }
+
     void setTheta(float theta) { m_theta = theta; }
-
-    void insertToNode(OctreeNode* node, CelestialBody* newBody);
-    Eigen::Vector3f calculateBarnesHutForce(OctreeNode* node, CelestialBody* target, float theta, double G, double softeningSq);
-
+    float getTheta() const { return m_theta; }
 };
