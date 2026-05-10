@@ -12,28 +12,20 @@ void GravityEngine::addBody(const CelestialBody& body) {
 
 void GravityEngine::setBodies(const std::vector<CelestialBody>& newBodies) {
     bodies = newBodies;
-    // Prime F(t=0) immediately so the integrator is ready.
     initializeForces();
 }
 
 void GravityEngine::saveInitialState() {
-    // Compute correct forces before snapshotting, so that resetInitialState()
-    // restores a state where the Verlet integrator can start cleanly.
     initializeForces();
     initialBodies = bodies;
 }
 
 void GravityEngine::resetInitialState() {
-    bodies = initialBodies;  // restores positions, velocities AND forces from snapshot
+    bodies = initialBodies;
     for (auto& body : bodies)
         body.clearTrailHistory();
-    // F(t=0) is already embedded in initialBodies — no need to recompute.
 }
 
-// ---------------------------------------------------------------------------
-// initializeForces: compute F(t=0) without advancing time.
-// Must be called once before the first update().
-// ---------------------------------------------------------------------------
 void GravityEngine::initializeForces() {
     for (auto& body : bodies)
         body.resetForce();
@@ -44,20 +36,12 @@ void GravityEngine::initializeForces() {
         calculateForcesBarnesHut();
 }
 
-// ---------------------------------------------------------------------------
-// update: one complete Velocity Verlet step.
-//
-//   Requires F(t) to be valid in body.force before this call.
-//   After this call, body.force holds F(t+dt).
-// ---------------------------------------------------------------------------
 void GravityEngine::update(double deltaTime) {
     if (bodies.empty()) return;
 
-    // Step 1 + half-kick:  x(t+dt)  and  v(t + dt/2)
     for (auto& body : bodies)
         body.updatePosition(deltaTime);
 
-    // Reset and recompute F(t+dt) at new positions.
     for (auto& body : bodies)
         body.resetForce();
 
@@ -66,7 +50,6 @@ void GravityEngine::update(double deltaTime) {
     else if (m_forceAlgorithm == ForceAlgorithm::BarnesHut)
         calculateForcesBarnesHut();
 
-    // Step 3 — second half-kick:  v(t+dt)
     for (auto& body : bodies) {
         body.updateVelocity(deltaTime);
         body.updateTrail(m_maxTrailLength, m_minTrailDistanceSq);
@@ -99,54 +82,80 @@ double GravityEngine::calculateTotalEnergy() const {
 }
 
 // ---------------------------------------------------------------------------
+// Helper: compute the octant index for a body relative to a node's centre.
+// ---------------------------------------------------------------------------
+static int getOctant(const OctreeNode* node, const CelestialBody* body) {
+    int oct = 0;
+    if (body->position.x() >= node->center.x()) oct |= 1;
+    if (body->position.y() >= node->center.y()) oct |= 2;
+    if (body->position.z() >= node->center.z()) oct |= 4;
+    return oct;
+}
+
+// ---------------------------------------------------------------------------
+// Helper: create child node for given octant if it doesn't exist yet.
+// ---------------------------------------------------------------------------
+static void createChild(OctreeNode* node, int octant) {
+    if (node->children[octant]) return;
+    float newSize = node->size / 2.0f;
+    float offset  = newSize / 2.0f;
+    Eigen::Vector3f nc = node->center;
+    nc.x() += (octant & 1) ? offset : -offset;
+    nc.y() += (octant & 2) ? offset : -offset;
+    nc.z() += (octant & 4) ? offset : -offset;
+    node->children[octant] = std::make_unique<OctreeNode>(nc, newSize);
+}
+
+// ---------------------------------------------------------------------------
 // Octree insertion
+//
+// Design: every node tracks the aggregate (totalMass, centerOfMass) of ALL
+// bodies in its subtree.  When a leaf is split we must push the existing body
+// DIRECTLY into the appropriate child, not back into the same node, otherwise
+// the node looks like an empty leaf again and the existing body never descends.
 // ---------------------------------------------------------------------------
 void GravityEngine::insertToNode(OctreeNode* node, CelestialBody* newBody, int depth) {
+    // ── depth cap: accumulate into this node without descending further ──
     if (depth > 64) {
-        float newTotalMass = node->totalMass + newBody->mass;
-        if (newTotalMass > 0.0f) {
+        float newTM = node->totalMass + newBody->mass;
+        if (newTM > 0.0f)
             node->centerOfMass = (node->centerOfMass * node->totalMass +
-                                  newBody->position * newBody->mass) / newTotalMass;
-        }
-        node->totalMass = newTotalMass;
+                                  newBody->position  * newBody->mass) / newTM;
+        node->totalMass = newTM;
         return;
     }
 
+    // ── empty leaf: just store the body here ──
     if (node->isLeaf() && node->body == nullptr) {
-        node->body = newBody;
-        node->totalMass = newBody->mass;
+        node->body        = newBody;
+        node->totalMass   = newBody->mass;
         node->centerOfMass = newBody->position;
         return;
     }
 
-    if (node->body) {
-        CelestialBody* existingBody = node->body;
+    // ── occupied leaf: split it ──
+    // Push the existing body DIRECTLY into its child octant so that
+    // this node becomes a proper internal node before we continue.
+    if (node->body != nullptr) {
+        CelestialBody* existing = node->body;
         node->body = nullptr;
-        node->totalMass = 0;
-        node->centerOfMass = Eigen::Vector3f::Zero();
-        insertToNode(node, existingBody, depth + 1);
+        // NOTE: do NOT reset totalMass/centerOfMass here – they already hold
+        // the correct aggregate for `existing`.
+
+        int existingOctant = getOctant(node, existing);
+        createChild(node, existingOctant);
+        insertToNode(node->children[existingOctant].get(), existing, depth + 1);
+        // node is now an internal node; fall through to insert newBody.
     }
 
-    float newTotalMass = node->totalMass + newBody->mass;
+    // ── internal node: update aggregate and recurse for newBody ──
+    float newTM = node->totalMass + newBody->mass;
     node->centerOfMass = (node->centerOfMass * node->totalMass +
-                          newBody->position * newBody->mass) / newTotalMass;
-    node->totalMass = newTotalMass;
+                          newBody->position   * newBody->mass) / newTM;
+    node->totalMass = newTM;
 
-    int octant = 0;
-    if (newBody->position.x() >= node->center.x()) octant |= 1;
-    if (newBody->position.y() >= node->center.y()) octant |= 2;
-    if (newBody->position.z() >= node->center.z()) octant |= 4;
-
-    if (!node->children[octant]) {
-        float newSize  = node->size / 2.0f;
-        float offset   = newSize / 2.0f;          // = node->size / 4
-        Eigen::Vector3f newCenter = node->center;
-        newCenter.x() += (octant & 1) ? offset : -offset;
-        newCenter.y() += (octant & 2) ? offset : -offset;
-        newCenter.z() += (octant & 4) ? offset : -offset;
-        node->children[octant] = std::make_unique<OctreeNode>(newCenter, newSize);
-    }
-
+    int octant = getOctant(node, newBody);
+    createChild(node, octant);
     insertToNode(node->children[octant].get(), newBody, depth + 1);
 }
 
@@ -155,14 +164,17 @@ void GravityEngine::insertToNode(OctreeNode* node, CelestialBody* newBody, int d
 // ---------------------------------------------------------------------------
 Eigen::Vector3f GravityEngine::calculateBarnesHutForce(OctreeNode* node, CelestialBody* target,
                                                         float theta, double G, double softeningSq) {
-    if (!node || node->body == target) return Eigen::Vector3f::Zero();
+    if (!node) return Eigen::Vector3f::Zero();
+
+    // Leaf containing only the target: skip (self-interaction).
+    if (node->isLeaf() && node->body == target)
+        return Eigen::Vector3f::Zero();
 
     Eigen::Vector3f r_vec = node->centerOfMass - target->position;
-    float dist_sq = r_vec.squaredNorm();
+    double dist_sq = r_vec.squaredNorm();
+    double dist_softened = std::sqrt(dist_sq + softeningSq);
 
-    // Use softened distance in the BH opening-angle criterion to avoid div-by-zero.
-    float dist_softened = std::sqrt(dist_sq + static_cast<float>(softeningSq));
-
+    // MAC: treat node as a point mass if it's a leaf or far enough away.
     if (node->isLeaf() || (node->size / dist_softened < theta)) {
         double r_sq = dist_sq + softeningSq;
         double r    = std::sqrt(r_sq);
@@ -173,7 +185,8 @@ Eigen::Vector3f GravityEngine::calculateBarnesHutForce(OctreeNode* node, Celesti
     Eigen::Vector3f totalForce = Eigen::Vector3f::Zero();
     for (int i = 0; i < 8; ++i) {
         if (node->children[i])
-            totalForce += calculateBarnesHutForce(node->children[i].get(), target, theta, G, softeningSq);
+            totalForce += calculateBarnesHutForce(node->children[i].get(), target,
+                                                  theta, G, softeningSq);
     }
     return totalForce;
 }
@@ -240,6 +253,7 @@ void GravityEngine::calculateForcesBarnesHut() {
                            (minY + maxY) / 2.0f,
                            (minZ + maxZ) / 2.0f);
     float maxSize = std::max({maxX - minX, maxY - minY, maxZ - minZ}) * 1.01f;
+    if (maxSize == 0.0f) maxSize = 1.0f;  // all bodies at same point
 
     auto root = std::make_unique<OctreeNode>(center, maxSize);
     for (auto& body : bodies)
@@ -250,7 +264,8 @@ void GravityEngine::calculateForcesBarnesHut() {
 
     #pragma omp parallel for schedule(dynamic)
     for (int i = 0; i < n; ++i) {
-        Eigen::Vector3f f = calculateBarnesHutForce(root.get(), &bodies[i], m_theta, G, softeningSq);
+        Eigen::Vector3f f = calculateBarnesHutForce(root.get(), &bodies[i],
+                                                     m_theta, G, softeningSq);
         bodies[i].addForce(f);
     }
 }
