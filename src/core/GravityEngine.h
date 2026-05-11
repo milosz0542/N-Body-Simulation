@@ -8,6 +8,7 @@
 
 #pragma once
 #include "CelestialBody.h"
+#include <memory>
 #include <vector>
 
 enum class ForceAlgorithm {
