@@ -64,8 +64,15 @@ Sprint 3 is finished (04.04.2026). <br>
 In this sprint, the rendering and camera movement in OpenGL were implemented. <br>
 The rendering is responsible for visualizing the objects in the simulation. <br>
 The camera movement allows the user to move the camera in the simulation and zoom in/out. <
-- [ ] Sprint 4: User interface in Qt
-- [ ] Sprint 5: Acceleration and optimization
+- [x] Sprint 4: User interface in Qt
+Sprint 4 is finished (18.04.2026). <br>
+In this sprint, the user interface in Qt was implemented. <br>
+The user interface allows the user to interact with the simulation and change the parameters of the objects. <br>
+- [x] Sprint 5: Acceleration and optimization
+Sprint 5 is finished (11.05.2026). <br>
+In this sprint, the acceleration and optimization were implemented. <br>
+The acceleration is responsible for improving the performance of the simulation. <br>
+The optimization is responsible for improving the performance of the simulation by using better algorithms and data structures. <br>
 - [ ] Sprint 6: Documentation and finalization
 
 It is meant to finish this project in one semester. (2025/2026 summer semester)

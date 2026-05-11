@@ -158,6 +158,32 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     resolutionSlider->setValue(5);
     visLayout->addWidget(resolutionSlider);
 
+    QComboBox *algoSelector = new QComboBox(this);
+    algoSelector->addItem("Verlet O(N^2) [OpenMP]");
+    algoSelector->addItem("Barnes-Hut O(N log N)");
+
+    visLayout->addWidget(new QLabel("Algorytm obliczania sił grawitacyjnych:", this));
+    visLayout->addWidget(algoSelector);
+
+    connect(algoSelector, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this](int index) {
+        if (index == 0) {
+            engine.setForceAlgorithm(ForceAlgorithm::Naive);
+        } else {
+            engine.setForceAlgorithm(ForceAlgorithm::BarnesHut);
+        }
+    });
+
+    QSlider *thetaSlider = new QSlider(Qt::Horizontal, this);
+    thetaSlider->setRange(1, 20);
+    thetaSlider->setValue(5);
+
+    visLayout->addWidget(new QLabel("Precyzja Barnes-hut (parametr Theta):", this));
+    visLayout->addWidget(thetaSlider);
+
+    connect(thetaSlider, &QSlider::valueChanged, this, [this](int value) {
+       engine.setTheta(value / 10.0f);
+    });
+
     visLayout->addStretch();
     tabs->addTab(visTab, "Wizualizacja");
 
