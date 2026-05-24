@@ -23,6 +23,15 @@ find_package(glm CONFIG REQUIRED)
 
 find_package(OpenMP REQUIRED)
 
+find_package(Doxygen)
+if(DOXYGEN_FOUND)
+    add_custom_target(docs
+            COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_SOURCE_DIR}/Doxyfile
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            COMMENT "Generating documentation with Doxygen"
+    )
+endif()
+
 add_library(NBodyCore
         src/core/CelestialBody.cpp
         src/core/GravityEngine.cpp

@@ -1,0 +1,66 @@
+# =============================================================
+#  Doxyfile — N-Body-Simulation
+#  Generuje dokumentację HTML do katalogu docs/html/
+# =============================================================
+
+# --- Informacje o projekcie ---
+PROJECT_NAME           = "N-Body Simulation"
+PROJECT_NUMBER         = 1.0.0
+PROJECT_BRIEF          = "Simulation and visualization of the N-body gravitational problem"
+PROJECT_LOGO           =
+
+# --- Ścieżki wejścia/wyjścia ---
+INPUT                  = src
+RECURSIVE              = YES
+OUTPUT_DIRECTORY       = docs
+HTML_OUTPUT            = html
+
+# --- Co dokumentować ---
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = NO
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+
+# --- Pliki źródłowe ---
+FILE_PATTERNS          = *.cpp *.h *.hpp
+EXCLUDE_PATTERNS       = */build/* */tests/*
+
+# --- Wygląd i format ---
+GENERATE_HTML          = YES
+GENERATE_LATEX         = YES
+GENERATE_XML           = NO
+HTML_DYNAMIC_SECTIONS  = YES
+GENERATE_TREEVIEW      = YES
+FULL_SIDEBAR           = NO
+
+# --- Diagramy (wymaga Graphviz) ---
+HAVE_DOT               = YES
+DOT_NUM_THREADS        = 4
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+CLASS_DIAGRAMS         = YES
+COLLABORATION_GRAPH    = YES
+UML_LOOK               = YES
+DOT_IMAGE_FORMAT       = svg
+
+# --- Kod źródłowy inline ---
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = NO
+
+# --- Ostrzeżenia ---
+WARN_IF_UNDOCUMENTED   = YES
+WARN_IF_DOC_ERROR      = YES
+QUIET                  = NO
+
+# --- Kodowanie ---
+DOXYFILE_ENCODING      = UTF-8
+INPUT_ENCODING         = UTF-8
+
+# --- Indeks & wyszukiwanie ---
+SEARCHENGINE           = YES
+SERVER_BASED_SEARCH    = NO
+
+# --- Makra preprocessora (opcjonalne) ---
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = NO

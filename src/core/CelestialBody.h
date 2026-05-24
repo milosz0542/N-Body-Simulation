@@ -116,6 +116,9 @@ public:
      */
     const std::deque<Eigen::Vector3f>& getTrailHistory() const { return trailHistory; }
 
+    /**
+     * @brief Clears the trail history, removing all recorded positions.
+     */
     void clearTrailHistory() { trailHistory.clear(); }
 
 private:

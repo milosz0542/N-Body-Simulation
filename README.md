@@ -1,4 +1,6 @@
 # N-body simulation
+![License](https://img.shields.io/badge/license-MIT-blue)
+![C++17](https://img.shields.io/badge/C%2B%2B-17-blue)<br>
 This project is a simulation of an N-body problem. <br>
 With given parameters (mass, radius, position and velocity) it calculates the position and velocity of the objects. <br>
 Simulation is visualized with OpenGL. Inside it is possible to move "camera". (zoom in/out, move in x, y and z axis)
@@ -17,7 +19,9 @@ $\overrightarrow{F}_{ij} = \frac{Gm_im_j(\overrightarrow{q}_j - \overrightarrow{
 - Qt
 - GLM
 - GLEW
-- Optionally: Eigen/Boost
+- Eigen
+- OpenMP
+- Google Test (GTest)
 
 ## Functionality
 - Simulation of N-body problem
@@ -25,7 +29,25 @@ $\overrightarrow{F}_{ij} = \frac{Gm_im_j(\overrightarrow{q}_j - \overrightarrow{
 - Camera movement
 
 ## Installation/compilation
-TODO
+### Requirements
+- C++17 compiler
+- CMake 3.18 or higher
+- OpenGL 4.6 or higher
+- Qt 5.15 or higher
+- GLM 0.9.9.8 or higher
+- GLEW 2.1.0 or higher
+- Eigen 3.3.9 or higher
+- OpenMP 4.5 or higher
+- Google Test (GTest) 1.11.0 or higher
+- Optionally: Doxygen 1.9.2 or higher for documentation generation
+
+### Build
+```bash
+git clone https://github.com/milosz0542/N-Body-Simulation.git
+cd N-Body-Simulation
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+```
 
 ## Usage
 ### For headless mode:
