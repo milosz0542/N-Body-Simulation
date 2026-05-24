@@ -28,6 +28,7 @@ EXCLUDE_PATTERNS       = */build/* */tests/*
 # --- Wygląd i format ---
 GENERATE_HTML          = YES
 GENERATE_LATEX         = YES
+LATEX_CMD_NAME = xelatex
 GENERATE_XML           = NO
 HTML_DYNAMIC_SECTIONS  = YES
 GENERATE_TREEVIEW      = YES
