@@ -29,7 +29,12 @@ jobs:
       - name: Build PDF from LaTeX
         run: |
           cd docs/latex
-          make pdf
+          sed -i 's/──/--/g' *.tex
+          sed -i 's/─/-/g' *.tex
+          pdflatex refman
+          makeindex refman.idx
+          pdflatex refman
+          pdflatex refman
           cp refman.pdf ../html/documentation.pdf
 
       - name: Setup Pages
