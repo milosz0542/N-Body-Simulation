@@ -32,17 +32,30 @@ void MainWindow::loadFromCSV(QString filename) {
     std::string line;
     std::vector<CelestialBody> newBodies;
 
+    // Skip header
+    std::getline(file, line);
+
     while (std::getline(file, line)) {
         if (line.empty()) continue;
-        
-        std::replace(line.begin(), line.end(), ',', ' ');
-        std::stringstream ss(line);
-        double x, y, z, vx, vy, vz, mass;
 
-        if (ss >> x >> y >> z >> vx >> vy >> vz >> mass) {
-            newBodies.emplace_back(Eigen::Vector3f(x, y, z), Eigen::Vector3f(vx, vy, vz), mass);
+        std::istringstream iss(line);
+        std::string token;
+        std::vector<float> data;
+
+        while (std::getline(iss, token, ',')) {
+            try {
+                data.push_back(std::stof(token));
+            } catch (const std::invalid_argument& e) {
+                std::cerr << "Invalid argument: " << token << " in line: " << line << std::endl;
+            }
+        }
+
+        if (data.size() == 7) {
+            newBodies.emplace_back(Eigen::Vector3f(data[0], data[1], data[2]),
+                                   Eigen::Vector3f(data[3], data[4], data[5]),
+                                   data[6]);
         } else {
-            std::cerr << "Invalid line format: " << line << std::endl;
+            std::cerr << "Invalid line format (expected 7 values: x,y,z,vx,vy,vz,m): " << line << std::endl;
         }
     }
 

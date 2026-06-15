@@ -13,5 +13,23 @@ target_link_libraries(CoreTests
     OpenMP::OpenMP_CXX
 )
 
+add_executable(GuiTests
+    gui/test_main_window.cpp
+    ../src/gui/MainWindow.cpp
+    ../src/gui/NBodyWidget.cpp
+    ../src/render/shaders.qrc
+)
+
+target_link_libraries(GuiTests
+    PRIVATE
+    NBodyCore
+    Qt6::Test
+    Qt6::Widgets
+    Qt6::OpenGL
+    Qt6::OpenGLWidgets
+    GLEW::GLEW
+    OpenMP::OpenMP_CXX
+)
+
 include(GoogleTest)
 gtest_discover_tests(CoreTests)

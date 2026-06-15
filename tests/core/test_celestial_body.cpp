@@ -42,18 +42,21 @@ TEST(CelestialBodyTest, ForceAccumulationAndReset) {
 }
 
 TEST(CelestialBodyTest, CSVLoadingLogic) {
-    // Simulating the logic from loadFromCSV
+    // Simulating the logic from loadUniverseFromFile
     std::string line = "1.0, 2.0, 3.0, 0.1, 0.2, 0.3, 100.0";
-    std::replace(line.begin(), line.end(), ',', ' ');
     std::stringstream ss(line);
-    double x, y, z, vx, vy, vz, mass;
+    std::string token;
+    std::vector<float> data;
+    while (std::getline(ss, token, ',')) {
+        data.push_back(std::stof(token));
+    }
 
-    ASSERT_TRUE(ss >> x >> y >> z >> vx >> vy >> vz >> mass);
-    EXPECT_DOUBLE_EQ(x, 1.0);
-    EXPECT_DOUBLE_EQ(y, 2.0);
-    EXPECT_DOUBLE_EQ(z, 3.0);
-    EXPECT_DOUBLE_EQ(vx, 0.1);
-    EXPECT_DOUBLE_EQ(vy, 0.2);
-    EXPECT_DOUBLE_EQ(vz, 0.3);
-    EXPECT_DOUBLE_EQ(mass, 100.0);
+    ASSERT_EQ(data.size(), 7);
+    EXPECT_FLOAT_EQ(data[0], 1.0f); // x
+    EXPECT_FLOAT_EQ(data[1], 2.0f); // y
+    EXPECT_FLOAT_EQ(data[2], 3.0f); // z
+    EXPECT_FLOAT_EQ(data[3], 0.1f); // vx
+    EXPECT_FLOAT_EQ(data[4], 0.2f); // vy
+    EXPECT_FLOAT_EQ(data[5], 0.3f); // vz
+    EXPECT_FLOAT_EQ(data[6], 100.0f); // m
 }

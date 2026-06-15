@@ -5,8 +5,13 @@ This project is a simulation of an N-body problem. <br>
 With given parameters (mass, radius, position and velocity) it calculates the position and velocity of the objects. <br>
 Simulation is visualized with OpenGL. Inside it is possible to move "camera". (zoom in/out, move in x, y and z axis)
 
+## Documentation
+- 📖 Online docs (Doxygen HTML): https://milosz0542.github.io/N-Body-Simulation/
+- 📄 PDF Doxygen manual: https://milosz0542.github.io/N-Body-Simulation/documentation.pdf
+- 📄 Technical Docs: [technical_documentation.pdf](./docs/technical_documentation.pdf)
+
 ## Physics
-This project is based on the following physics:
+  This project is based on the following physics:
 - Gravitational force
 - Newton's law of universal gravitation
 - Einstein's General theory of relativity
@@ -50,6 +55,18 @@ cmake --build build
 ```
 
 ## Usage
+
+### For GUI mode
+- Run the executable without arguments.
+- Use the mouse and keyboard to:
+    - rotate the camera around the system,
+    - zoom in/out,
+    - pan in x/y/z,
+    - start/pause the simulation.
+
+Parameters such as number of bodies and initial conditions can be adjusted via the .csv file. <br>
+Parameters such as simulation speed, visualization adjustments, algorithm (and theta for barnes-hut) can be adjusted via the Qt UI.
+
 ### For headless mode:
 Use 
 ```aiignore
@@ -64,8 +81,8 @@ to run the program in headless mode with custom parameters.
 
 File format to provide data:
 ```aiignore
-mass1,position_x1,position_y1,position_z1,velocity_x1,velocity_y1,velocity_z1
-mass2,position_x2,position_y2,position_z2,velocity_x2,velocity_y2,velocity_z2
+position_x1,position_y1,position_z1,velocity_x1,velocity_y1,velocity_z1,mass1
+position_x2,position_y2,position_z2,velocity_x2,velocity_y2,velocity_z2,mass2
 ...
 ```
 (where 1,2,etc. are indices of the objects)
@@ -85,7 +102,7 @@ Headless mode is implemented for verification.
 Sprint 3 is finished (04.04.2026). <br>
 In this sprint, the rendering and camera movement in OpenGL were implemented. <br>
 The rendering is responsible for visualizing the objects in the simulation. <br>
-The camera movement allows the user to move the camera in the simulation and zoom in/out. <
+The camera movement allows the user to move the camera in the simulation and zoom in/out. <br>
 - [x] Sprint 4: User interface in Qt
 Sprint 4 is finished (18.04.2026). <br>
 In this sprint, the user interface in Qt was implemented. <br>
@@ -95,6 +112,10 @@ Sprint 5 is finished (11.05.2026). <br>
 In this sprint, the acceleration and optimization were implemented. <br>
 The acceleration is responsible for improving the performance of the simulation. <br>
 The optimization is responsible for improving the performance of the simulation by using better algorithms and data structures. <br>
-- [ ] Sprint 6: Documentation and finalization
+- [x] Sprint 6: Documentation and finalization <br>
+Sprint 6 is finished (07.06.2026). <br>
+In this sprint, the documentation and finalization were implemented. <br>
+The documentation is responsible for providing information about the project and how to use it. <br>
+The finalization is responsible for preparing the project for release and making sure that everything is working correctly. <br>
 
 It is meant to finish this project in one semester. (2025/2026 summer semester)

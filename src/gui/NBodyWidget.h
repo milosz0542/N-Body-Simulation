@@ -142,7 +142,7 @@ private:
     /**
      * @brief Maximum number of bodies supported by current GPU-side buffers.
      */
-    const int MAX_BODIES = 2000;
+    const int MAX_BODIES = 10000;
 
     /**
      * @brief Maximum trail length supported by rendering pipeline.

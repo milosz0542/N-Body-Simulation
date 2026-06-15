@@ -13,6 +13,7 @@ find_package(Qt6 COMPONENTS
         Widgets
         OpenGL
         OpenGLWidgets
+        Test
         REQUIRED)
 
 find_package(OpenGL REQUIRED)

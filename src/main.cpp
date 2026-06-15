@@ -40,14 +40,14 @@ bool loadUniverseFromFile(const std::string& filename, GravityEngine& engine) {
         }
 
         if (data.size() == 7) {
-            float mass = data[0];
-            Eigen::Vector3f position(data[1], data[2], data[3]);
-            Eigen::Vector3f velocity(data[4], data[5], data[6]);
+            Eigen::Vector3f position(data[0], data[1], data[2]);
+            Eigen::Vector3f velocity(data[3], data[4], data[5]);
+            float mass = data[6];
             CelestialBody body(position, velocity, mass);
             engine.addBody(body);
             bodiesLoaded++;
         } else {
-            std::cerr << "Invalid line format: " << line << std::endl;
+            std::cerr << "Invalid line format (expected 7 values: x,y,z,vx,vy,vz,m): " << line << std::endl;
         }
     }
 
@@ -57,10 +57,16 @@ bool loadUniverseFromFile(const std::string& filename, GravityEngine& engine) {
     return true;
 }
 
-void runHeadlessMode(int steps, float deltaTime) {
+void runHeadlessMode(int steps, float deltaTime, ForceAlgorithm algo, float theta) {
     std::cout << "--- RUNNING IN HEADLESS MODE ---\n";
+    std::cout << "Algorithm: " << (algo == ForceAlgorithm::Naive ? "Naive" : "Barnes-Hut") << "\n";
+    if (algo == ForceAlgorithm::BarnesHut) {
+        std::cout << "Theta: " << theta << "\n";
+    }
 
     GravityEngine engine;
+    engine.setForceAlgorithm(algo);
+    engine.setTheta(theta);
 
     std::ofstream csvFile("simulation_results.csv");
     if (!csvFile.is_open()) {
@@ -68,47 +74,60 @@ void runHeadlessMode(int steps, float deltaTime) {
     }
 
     if (!inputFile.empty()) {
-        loadUniverseFromFile(inputFile, engine);
+        if (!loadUniverseFromFile(inputFile, engine)) {
+            return;
+        }
 
         csvFile << "Step,Time";
+        for (int i = 0; i < engine.getBodies().size(); i++) {
+            csvFile << ",x" << i+1 << ",y" << i+1 << ",z" << i+1 << ",v_x" << i+1 << ",v_y" << i+1 << ",v_z" << i+1 << ",m" << i+1;
+        } csvFile << "\n";
+
         std::cout << "Step \t Time";
         for (int i = 0; i < engine.getBodies().size(); i++) {
-            csvFile << ",Planet_" << i+1 << "_X,Planet_" << i+1 << "_Y,Planet_" << i+1 << "_Z";
-            std::cout << "\t Planet_" << i+1 << "_X \t Planet_" << i+1 << "_Y \t Planet_" << i+1 << "_Z";
-        } csvFile << "\n"; std::cout << "\n";
+            std::cout << "\t B" << i+1 << "_X \t B" << i+1 << "_Y \t B" << i+1 << "_Z";
+        } std::cout << "\n";
 
         std::cout << "Simulation started...\n";
         for (int i = 0; i < steps; i++) {
             engine.update(deltaTime);
-            if (i % 100 == 0) {
+            if (i % 100 == 0 || i == steps - 1) {
                 csvFile << i << "," << i * deltaTime;
-                for (int j = 0; j < engine.getBodies().size(); j++) {
-                    csvFile << "," << engine.getBodies()[j].position.x() << "," << engine.getBodies()[j].position.y() << "," << engine.getBodies()[j].position.z();
+                for (const auto& body : engine.getBodies()) {
+                    csvFile << "," << body.position.x() << "," << body.position.y() << "," << body.position.z()
+                            << "," << body.velocity.x() << "," << body.velocity.y() << "," << body.velocity.z()
+                            << "," << body.mass;
                 } csvFile << "\n";
             }
-            std::cout << i << "\t" << (i * deltaTime);
-            for (int j = 0; j < engine.getBodies().size(); j++) {
-                std::cout << "\t" << engine.getBodies()[j].position.x() << "\t" << engine.getBodies()[j].position.y() << "\t" << engine.getBodies()[j].position.z();
-            } std::cout << "\n";
+            if (i % 100 == 0) {
+                std::cout << i << "\t" << (i * deltaTime);
+                for (const auto& body : engine.getBodies()) {
+                    std::cout << "\t" << body.position.x() << "\t" << body.position.y() << "\t" << body.position.z();
+                } std::cout << "\n";
+            }
         }
     } else {
-        std::cout << "No input file specified. Using default universe.\n";
+        std::cout << "No input file specified. Using default universe (Earth only).\n";
 
-        csvFile << "Step,Time,X,Y,Z\n";
         CelestialBody earth(Eigen::Vector3f::Zero(), Eigen::Vector3f::Zero(), 5.97e24f);
         engine.addBody(earth);
-        engine.update(deltaTime);
+        engine.initializeForces();
+
+        csvFile << "Step,Time,x1,y1,z1,v_x1,v_y1,v_z1,m1\n";
+        std::cout << "Step \t Time \t X \t Y \t Z\n";
 
         std::cout << "Simulation started...\n";
-        std::cout << "Step \t Time \t X \t Y \t Z\n";
         for (int i = 0; i < steps; i++) {
             engine.update(deltaTime);
-            if (i % 100 == 0) {
-                Eigen::Vector3f position = earth.position;
-                float currentTime = i * deltaTime;
-                csvFile << i << "," << currentTime << "," << position.x() << "," << position.y() << "," << position.z() << "\n";
+            const auto& body = engine.getBodies()[0];
+            if (i % 100 == 0 || i == steps - 1) {
+                csvFile << i << "," << i * deltaTime << "," << body.position.x() << "," << body.position.y() << "," << body.position.z()
+                        << "," << body.velocity.x() << "," << body.velocity.y() << "," << body.velocity.z()
+                        << "," << body.mass << "\n";
             }
-            std::cout << i << "\t" << (i * deltaTime) << "\t" << earth.position.x() << "\t" << earth.position.y() << "\t" << earth.position.z() << "\n";
+            if (i % 100 == 0) {
+                std::cout << i << "\t" << (i * deltaTime) << "\t" << body.position.x() << "\t" << body.position.y() << "\t" << body.position.z() << "\n";
+            }
         }
     }
 
@@ -117,22 +136,49 @@ void runHeadlessMode(int steps, float deltaTime) {
 
 int main(int argc, char *argv[]) {
     bool isHeadless = false;
+    ForceAlgorithm algo = ForceAlgorithm::Naive;
+    float theta = 0.5f;
+    int steps = 1000;
+    float dt = 0.01f;
 
     for (int i = 1; i < argc; i++) {
-        if (std::string(argv[i]) == "--headless") { // Run in headless
+        std::string arg = argv[i];
+        if (arg == "--headless") {
             isHeadless = true;
-        } else if (std::string(argv[i]) == "--file") { // Provide universe from file
+        } else if (arg == "--file") {
             if (i + 1 < argc) {
-                inputFile = argv[i + 1];
-                ++i; // Skip the filename argument
+                inputFile = argv[++i];
             } else {
-                std::cerr << "Error: --file option requires a filename argument.\n";
+                std::cerr << "Error: --file requires a filename argument.\n";
+            }
+        } else if (arg == "--algo") {
+            if (i + 1 < argc) {
+                std::string algoStr = argv[++i];
+                if (algoStr == "barnes-hut") {
+                    algo = ForceAlgorithm::BarnesHut;
+                } else if (algoStr == "naive") {
+                    algo = ForceAlgorithm::Naive;
+                } else {
+                    std::cerr << "Unknown algorithm: " << algoStr << ". Using Naive.\n";
+                }
+            }
+        } else if (arg == "--theta") {
+            if (i + 1 < argc) {
+                theta = std::stof(argv[++i]);
+            }
+        } else if (arg == "--steps") {
+            if (i + 1 < argc) {
+                steps = std::stoi(argv[++i]);
+            }
+        } else if (arg == "--dt") {
+            if (i + 1 < argc) {
+                dt = std::stof(argv[++i]);
             }
         }
     }
 
     if (isHeadless) {
-        runHeadlessMode(1000, 0.01f);
+        runHeadlessMode(steps, dt, algo, theta);
         return 0;
     } // Else -> run in window mode
     QSurfaceFormat format;
